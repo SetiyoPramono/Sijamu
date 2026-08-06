@@ -1,0 +1,460 @@
+.topBar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  background: var(--color-white);
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.topTitle {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--color-text);
+  margin-top: var(--space-2);
+}
+
+.topTitle span {
+  color: var(--color-primary);
+}
+
+.topProgress {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.topProgressText {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+/* Indicator tabs */
+.indTabs {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  background: var(--color-white);
+  border-bottom: 1px solid var(--color-border);
+  overflow-x: auto;
+  flex-wrap: nowrap;
+}
+
+.indTab {
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  border: 2px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.indTab:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.indTabActive {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: white;
+}
+
+.indTabDone {
+  border-color: var(--color-success);
+  background: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.indTabDone.indTabActive {
+  background: var(--color-success);
+  color: white;
+}
+
+/* Split Screen */
+.splitScreen {
+  display: flex;
+  height: calc(100vh - 160px);
+  overflow: hidden;
+}
+
+/* Document panel (60%) */
+.docPanel {
+  width: 60%;
+  flex-shrink: 0;
+  border-right: 2px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  background: #F8F9FD;
+}
+
+.docToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-white);
+  border-bottom: 1px solid var(--color-border);
+  gap: var(--space-3);
+  flex-shrink: 0;
+}
+
+.docTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zoomControls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.zoomBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--color-border);
+  background: var(--color-white);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--color-text);
+  transition: all var(--transition-fast);
+}
+
+.zoomBtn:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.zoomBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.zoomVal {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-text);
+  min-width: 40px;
+  text-align: center;
+}
+
+.docViewer {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-6);
+  display: flex;
+  justify-content: center;
+}
+
+/* PDF placeholder */
+.pdfPlaceholder {
+  transition: transform 0.2s ease;
+}
+
+.pdfPage {
+  width: 595px;
+  background: white;
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+}
+
+.pdfHeader {
+  background: var(--sidebar-bg);
+  padding: var(--space-6);
+  text-align: center;
+  color: white;
+}
+
+.pdfLogo {
+  font-size: var(--font-size-sm);
+  opacity: 0.8;
+  margin-bottom: var(--space-2);
+}
+
+.pdfTitle {
+  font-size: var(--font-size-2xl);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.pdfSubtitle {
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  margin-top: var(--space-1);
+}
+
+.pdfProdi {
+  font-size: var(--font-size-sm);
+  opacity: 0.75;
+  margin-top: var(--space-1);
+}
+
+.pdfBody {
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.pdfSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.pdfSectionTitle {
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  color: var(--color-text);
+  border-bottom: 2px solid var(--color-primary);
+  padding-bottom: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.pdfLine {
+  height: 14px;
+  background: linear-gradient(90deg, #e8e8e8, #f0f0f0);
+  border-radius: var(--radius-sm);
+  width: 100%;
+}
+
+.pdfBox {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-border);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.pdfPageNum {
+  text-align: center;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-light);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-border);
+  background: white;
+  margin-top: var(--space-4);
+}
+
+/* Assessment panel (40%) */
+.assessPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--color-white);
+}
+
+.assessScroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-5) var(--space-6);
+}
+
+.assessHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.indicatorBadge {
+  background: var(--color-primary);
+  color: white;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  font-weight: 800;
+  font-size: var(--font-size-base);
+  flex-shrink: 0;
+}
+
+.indicatorTitle {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.rubrikBox {
+  background: var(--color-primary-light);
+  border: 1px solid rgba(26, 86, 219, 0.2);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.rubrikLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-bottom: var(--space-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.rubrikText {
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+  line-height: 1.7;
+}
+
+.formSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* Nilai grid */
+.nilaiGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.nilaiCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: center;
+}
+
+.nilaiCard:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.nilaiInput {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.nilaiNum {
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.nilaiLabel {
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  line-height: 1.3;
+}
+
+.nilaiGreen { }
+.nilaiGreen .nilaiNum { color: var(--color-success); }
+.nilaiGreen.nilaiCardActive { border-color: var(--color-success); background: var(--color-success-light); }
+
+.nilaiYellow .nilaiNum { color: var(--color-warning); }
+.nilaiYellow.nilaiCardActive { border-color: var(--color-warning); background: var(--color-warning-light); }
+
+.nilaiRed .nilaiNum { color: var(--color-danger); }
+.nilaiRed.nilaiCardActive { border-color: var(--color-danger); background: var(--color-danger-light); }
+
+.nilaiCardActive .nilaiLabel { color: var(--color-text); }
+
+/* Footer */
+.assessFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-6);
+  background: var(--color-white);
+  border-top: 2px solid var(--color-border);
+  box-shadow: 0 -4px 16px rgba(0,0,0,0.06);
+  flex-shrink: 0;
+}
+
+/* Review */
+.reviewCard {}
+
+.reviewActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-6);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-border);
+}
+
+/* Success screen */
+.successScreen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-10);
+  gap: var(--space-5);
+}
+
+.successIcon {
+  font-size: 80px;
+}
+
+.successTitle {
+  font-size: var(--font-size-3xl);
+  font-weight: 800;
+  color: var(--color-success);
+}
+
+.successMsg {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-muted);
+  line-height: 1.7;
+  max-width: 480px;
+}
+
+@media (max-width: 1024px) {
+  .splitScreen {
+    flex-direction: column;
+    height: auto;
+  }
+  .docPanel {
+    width: 100%;
+    height: 50vh;
+  }
+  .assessPanel {
+    height: auto;
+  }
+}
