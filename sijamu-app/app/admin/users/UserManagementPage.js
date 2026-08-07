@@ -2,15 +2,23 @@
 // CSS ada di: UserManagementPage.module.css
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Breadcrumb from '@/components/Breadcrumb';
 import ConfirmModal from '@/components/ConfirmModal';
 import { ToastContainer, addToast } from '@/components/Toast';
+import { useAuth } from '@/context/AuthContext';
 import styles from './UserManagementPage.module.css';
 
-/* ─── Data dummy ─── */
-const ROLES = ['Administrator', 'Auditor / Asesor', 'Dekan / Pimpinan', 'Koordinator Prodi', 'Staf / Task Force'];
+/* ─── Role Mapping ─── */
+const ROLE_MAP = {
+  'admin': 'Administrator',
+  'auditor': 'Auditor / Asesor',
+  'dekan': 'Dekan / Pimpinan',
+  'koprodi': 'Koordinator Prodi',
+  'taskforce': 'Staf / Task Force'
+};
+const ROLES = Object.keys(ROLE_MAP);
 
 const PERMISSIONS = [
   { key: 'view_dashboard',    label: 'Lihat Dashboard',          group: 'Dashboard' },
@@ -22,37 +30,49 @@ const PERMISSIONS = [
   { key: 'upload_document',   label: 'Unggah Dokumen',           group: 'Dokumen' },
   { key: 'delete_document',   label: 'Hapus Dokumen',            group: 'Dokumen' },
   { key: 'view_document',     label: 'Lihat Dokumen',            group: 'Dokumen' },
+  { key: 'view_rps',          label: 'Akses Halaman RPS',        group: 'RPS' },
+  { key: 'manage_rps',        label: 'Manajemen Data RPS',       group: 'RPS' },
   { key: 'manage_users',      label: 'Manajemen Pengguna',       group: 'Administrasi' },
   { key: 'manage_roles',      label: 'Kelola Peran & Izin',      group: 'Administrasi' },
   { key: 'system_settings',   label: 'Pengaturan Sistem',        group: 'Administrasi' },
 ];
 
 const DEFAULT_PERMISSIONS = {
-  'Administrator':        PERMISSIONS.map(p => p.key),
-  'Auditor / Asesor':     ['view_dashboard', 'view_report', 'start_evaluation', 'submit_evaluation', 'edit_evaluation', 'view_document'],
-  'Dekan / Pimpinan':     ['view_dashboard', 'view_report', 'export_report', 'view_document'],
-  'Koordinator Prodi':    ['view_dashboard', 'view_report', 'upload_document', 'delete_document', 'view_document'],
-  'Staf / Task Force':    ['upload_document', 'view_document'],
+  'admin':        PERMISSIONS.map(p => p.key),
+  'auditor':      ['view_dashboard', 'view_report', 'start_evaluation', 'submit_evaluation', 'edit_evaluation', 'view_document', 'view_rps'],
+  'dekan':        ['view_dashboard', 'view_report', 'export_report', 'view_document', 'view_rps'],
+  'koprodi':      ['view_dashboard', 'view_report', 'upload_document', 'delete_document', 'view_document', 'view_rps', 'manage_rps'],
+  'taskforce':    ['upload_document', 'view_document', 'view_rps', 'manage_rps'],
 };
 
-const INITIAL_USERS = [
-  { id: 1, nama: 'Dr. Ahmad Fauzi, M.Kom',   nip: '198501012010011001', email: 'ahmad.fauzi@unipgri-bwi.ac.id',   role: 'Administrator',       status: 'aktif',    prodi: '-',                         lastLogin: '2026-08-05 08:12' },
-  { id: 2, nama: 'Prof. Siti Rahayu, M.Pd',  nip: '197203141999032001', email: 'siti.rahayu@unipgri-bwi.ac.id',   role: 'Auditor / Asesor',    status: 'aktif',    prodi: 'Pendidikan Matematika',     lastLogin: '2026-08-04 14:30' },
-  { id: 3, nama: 'Dr. Budi Santoso, M.M',    nip: '197808082005011002', email: 'budi.santoso@unipgri-bwi.ac.id',  role: 'Dekan / Pimpinan',   status: 'aktif',    prodi: 'Fakultas Ekonomi',          lastLogin: '2026-08-03 09:45' },
-  { id: 4, nama: 'Dewi Lestari, S.Kom',      nip: '199201012018012001', email: 'dewi.lestari@unipgri-bwi.ac.id',  role: 'Koordinator Prodi',  status: 'aktif',    prodi: 'Teknik Informatika',        lastLogin: '2026-08-05 07:55' },
-  { id: 5, nama: 'Rian Pratama, S.Pd',       nip: '199507152020011001', email: 'rian.pratama@unipgri-bwi.ac.id',  role: 'Staf / Task Force',  status: 'aktif',    prodi: 'Teknik Informatika',        lastLogin: '2026-08-05 08:01' },
-  { id: 6, nama: 'Dr. Wati Nugraheni, M.Hum',nip: '197604201999032002', email: 'wati.nugraheni@unipgri-bwi.ac.id',role: 'Auditor / Asesor',   status: 'aktif',    prodi: 'Pendidikan Bahasa Inggris', lastLogin: '2026-08-02 16:20' },
-  { id: 7, nama: 'Faisal Hadi, S.E',         nip: '199309102019011001', email: 'faisal.hadi@unipgri-bwi.ac.id',   role: 'Staf / Task Force',  status: 'nonaktif', prodi: 'Akuntansi',                 lastLogin: '2026-07-28 11:10' },
-  { id: 8, nama: 'Rini Wahyuningsih, M.Pd',  nip: '198806152015032001', email: 'rini.wahyu@unipgri-bwi.ac.id',    role: 'Koordinator Prodi',  status: 'aktif',    prodi: 'Pendidikan IPA',            lastLogin: '2026-08-04 13:05' },
+
+const MOCK_USERS = [
+  { id: 1, nama: 'Dr. Ahmad Fauzi, M.Kom',   nip: '197001012000031001', email: 'ahmad@unipgri.ac.id',   role: 'admin',     status: 'aktif',    prodi: '',                           lastLogin: '2026-08-05 08:12' },
+  { id: 2, nama: 'Prof. Dr. Siti Rahayu',    nip: '196805152001122001', email: 'siti@unipgri.ac.id',    role: 'dekan',     status: 'aktif',    prodi: '',                           lastLogin: '2026-08-04 14:30' },
+  { id: 3, nama: 'Dr. Budi Santoso, M.T',    nip: '198003102005011002', email: 'budi@unipgri.ac.id',    role: 'koprodi',   status: 'aktif',    prodi: 'Teknik Informatika',         lastLogin: '2026-08-03 09:45' },
+  { id: 4, nama: 'Rina Wulandari, S.Kom',    nip: '199201052019032001', email: 'rina@unipgri.ac.id',    role: 'taskforce', status: 'aktif',    prodi: 'Teknik Informatika',         lastLogin: '2026-08-05 07:55' },
+  { id: 5, nama: 'Dr. Wati Nurhayati, M.M',  nip: '197712282004012002', email: 'wati@unipgri.ac.id',    role: 'auditor',   status: 'aktif',    prodi: 'Pendidikan Matematika',      lastLogin: '2026-08-05 08:01' },
 ];
 
-const EMPTY_FORM = { nama: '', nip: '', email: '', role: ROLES[4], prodi: '', status: 'aktif', password: '' };
-const PRODI_LIST = ['Teknik Informatika', 'Pendidikan Matematika', 'Manajemen', 'Pendidikan Bahasa Inggris', 'Akuntansi', 'Pendidikan IPA', 'Hukum', 'Fakultas Ekonomi', '-'];
+const EMPTY_FORM = { nama: '', nip: '', email: '', role: 'taskforce', prodi: '', status: 'aktif', password: '' };
+const PRODI_LIST = ['Teknik Informatika', 'Pendidikan Matematika', 'Manajemen', 'Pendidikan Bahasa Inggris', 'Akuntansi', 'Pendidikan IPA', 'Hukum', 'Fakultas Ekonomi', ''];
 
 export default function UserManagementPage() {
-  const [users, setUsers] = useState(INITIAL_USERS);
+  const { user } = useAuth();
+  const [users, setUsers] = useState([]);
+  const [dataLoading, setDataLoading] = useState(true);
   const [permissions, setPermissions] = useState(DEFAULT_PERMISSIONS);
   const [activeTab, setActiveTab] = useState('users'); // 'users' | 'permissions'
+
+  useEffect(() => {
+    const load = async () => {
+      setDataLoading(true);
+      await new Promise(r => setTimeout(r, 600)); // simulated API call
+      setUsers(MOCK_USERS);
+      setDataLoading(false);
+    };
+    load();
+  }, []);
 
   /* ─── User list state ─── */
   const [search, setSearch] = useState('');
@@ -172,10 +192,10 @@ export default function UserManagementPage() {
   const [selectedRole, setSelectedRole] = useState(ROLES[0]);
 
   const roleBadgeClass = (role) => {
-    if (role === 'Administrator') return styles.roleAdmin;
-    if (role === 'Auditor / Asesor') return styles.roleAuditor;
-    if (role === 'Dekan / Pimpinan') return styles.roleDekan;
-    if (role === 'Koordinator Prodi') return styles.roleKoprodi;
+    if (role === 'admin') return styles.roleAdmin;
+    if (role === 'auditor') return styles.roleAuditor;
+    if (role === 'dekan') return styles.roleDekan;
+    if (role === 'koprodi') return styles.roleKoprodi;
     return styles.roleStaf;
   };
 
@@ -239,7 +259,7 @@ export default function UserManagementPage() {
                   <label className="form-label" htmlFor="u-role">Peran / Role</label>
                   <select id="u-role" className="form-select"
                     value={form.role} onChange={e => setForm(f => ({...f, role: e.target.value}))}>
-                    {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                    {ROLES.map(r => <option key={r} value={r}>{ROLE_MAP[r]}</option>)}
                   </select>
                 </div>
 
@@ -379,7 +399,6 @@ export default function UserManagementPage() {
           ═══════════════════════════════════════════ */}
           {activeTab === 'users' && (
             <div className="card">
-              {/* Filter bar */}
               <div className={styles.filterBar}>
                 <div className={styles.searchWrap}>
                   <svg className={styles.searchIcon} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -397,7 +416,7 @@ export default function UserManagementPage() {
                 <select className={`form-select ${styles.filterSelect}`} value={filterRole}
                   onChange={e => setFilterRole(e.target.value)} aria-label="Filter berdasarkan peran">
                   <option value="">Semua Peran</option>
-                  {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                  {ROLES.map(r => <option key={r} value={r}>{ROLE_MAP[r]}</option>)}
                 </select>
                 <select className={`form-select ${styles.filterSelect}`} value={filterStatus}
                   onChange={e => setFilterStatus(e.target.value)} aria-label="Filter berdasarkan status">
@@ -421,6 +440,7 @@ export default function UserManagementPage() {
                 <table className="data-table" aria-label="Daftar pengguna sistem SIJAMU">
                   <thead>
                     <tr>
+                      <th scope="col">#</th>
                       <th scope="col">Pengguna</th>
                       <th scope="col">NIP / NIDN</th>
                       <th scope="col">Peran</th>
@@ -431,77 +451,82 @@ export default function UserManagementPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.length === 0 ? (
+                    {dataLoading ? (
+                      <tr><td colSpan="8" style={{textAlign: 'center', padding: 'var(--space-6)', color: 'var(--color-text-muted)'}}>Memuat data pengguna...</td></tr>
+                    ) : filtered.length === 0 ? (
                       <tr>
-                        <td colSpan={7}>
+                        <td colSpan="8">
                           <div className={styles.emptyState}>
                             <div className={styles.emptyIcon}>🔍</div>
                             <div>Tidak ada pengguna yang sesuai filter</div>
                           </div>
                         </td>
                       </tr>
-                    ) : filtered.map(user => (
-                      <tr key={user.id} className={user.status === 'nonaktif' ? styles.rowDimmed : ''}>
-                        <td>
-                          <div className={styles.userCell}>
-                            <div className={styles.userAvatar} aria-hidden="true" style={{
-                              background: user.role === 'Administrator' ? '#C81E1E'
-                                : user.role === 'Auditor / Asesor' ? '#1A56DB'
-                                : user.role === 'Dekan / Pimpinan' ? '#057A55'
-                                : user.role === 'Koordinator Prodi' ? '#C27803'
-                                : '#6B7280'
-                            }}>
-                              {user.nama.split(' ').slice(-1)[0][0]}
+                    ) : (
+                      filtered.map((u, i) => (
+                        <tr key={u.id} className={u.status === 'nonaktif' ? styles.rowDimmed : ''}>
+                          <td>{i + 1}</td>
+                          <td>
+                            <div className={styles.userCell}>
+                              <div className={styles.userAvatar} aria-hidden="true" style={{
+                                background: u.role === 'admin' ? '#C81E1E'
+                                  : u.role === 'auditor' ? '#1A56DB'
+                                  : u.role === 'dekan' ? '#057A55'
+                                  : u.role === 'koprodi' ? '#C27803'
+                                  : '#6B7280'
+                              }}>
+                                {u.nama.split(' ').slice(-1)[0][0]}
+                              </div>
+                              <div>
+                                <div className={styles.userName}>{u.nama}</div>
+                                <div className={styles.userEmail}>{u.email}</div>
+                              </div>
                             </div>
-                            <div>
-                              <div className={styles.userName}>{user.nama}</div>
-                              <div className={styles.userEmail}>{user.email}</div>
+                          </td>
+                          <td className={styles.nipCell}>{u.nip}</td>
+                          <td>
+                            <span className={`${styles.roleBadge} ${roleBadgeClass(u.role)}`}>
+                              {ROLE_MAP[u.role]}
+                            </span>
+                          </td>
+                          <td className={styles.prodiCell}>{u.prodi || '-'}</td>
+                          <td>
+                            <button
+                              className={`${styles.statusToggle} ${u.status === 'aktif' ? styles.statusAktif : styles.statusNonaktif}`}
+                              onClick={() => toggleStatus(u.id)}
+                              aria-label={`Status ${u.nama}: ${u.status}. Klik untuk mengubah`}
+                              title="Klik untuk mengubah status"
+                            >
+                              <span className={styles.statusDot} />
+                              {u.status === 'aktif' ? 'Aktif' : 'Non-aktif'}
+                            </button>
+                          </td>
+                          <td className={styles.loginCell}>{u.lastLogin}</td>
+                          <td>
+                            <div className={styles.actionBtns}>
+                              <button className="btn btn-sm btn-outline"
+                                onClick={() => openEdit(u)}
+                                aria-label={`Edit pengguna ${u.nama}`}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                </svg>
+                                Edit
+                              </button>
+                              <button className="btn btn-sm btn-danger"
+                                onClick={() => setDeleteTarget(u.id)}
+                                disabled={u.id === 1}
+                                aria-label={`Hapus pengguna ${u.nama}`}
+                                title={u.id === 1 ? 'Administrator utama tidak dapat dihapus' : 'Hapus pengguna'}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                  <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                                </svg>
+                                Hapus
+                              </button>
                             </div>
-                          </div>
-                        </td>
-                        <td className={styles.nipCell}>{user.nip}</td>
-                        <td>
-                          <span className={`${styles.roleBadge} ${roleBadgeClass(user.role)}`}>
-                            {user.role}
-                          </span>
-                        </td>
-                        <td className={styles.prodiCell}>{user.prodi}</td>
-                        <td>
-                          <button
-                            className={`${styles.statusToggle} ${user.status === 'aktif' ? styles.statusAktif : styles.statusNonaktif}`}
-                            onClick={() => toggleStatus(user.id)}
-                            aria-label={`Status ${user.nama}: ${user.status}. Klik untuk mengubah`}
-                            title="Klik untuk mengubah status"
-                          >
-                            <span className={styles.statusDot} />
-                            {user.status === 'aktif' ? 'Aktif' : 'Non-aktif'}
-                          </button>
-                        </td>
-                        <td className={styles.loginCell}>{user.lastLogin}</td>
-                        <td>
-                          <div className={styles.actionBtns}>
-                            <button className="btn btn-sm btn-outline"
-                              onClick={() => openEdit(user)}
-                              aria-label={`Edit pengguna ${user.nama}`}>
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                              </svg>
-                              Edit
-                            </button>
-                            <button className="btn btn-sm btn-danger"
-                              onClick={() => setDeleteTarget(user.id)}
-                              disabled={user.id === 1}
-                              aria-label={`Hapus pengguna ${user.nama}`}
-                              title={user.id === 1 ? 'Administrator utama tidak dapat dihapus' : 'Hapus pengguna'}>
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                              </svg>
-                              Hapus
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -513,22 +538,16 @@ export default function UserManagementPage() {
           ═══════════════════════════════════════════ */}
           {activeTab === 'permissions' && (
             <div className={styles.permissionsLayout}>
-              {/* Role Selector */}
               <div className={`card ${styles.roleSelector}`}>
                 <h2 className="card-title" style={{fontSize:'var(--font-size-base)'}}>Pilih Peran</h2>
-                <div className={styles.roleList}>
-                  {ROLES.map(role => (
+                <div className={styles.roleTabs}>
+                  {ROLES.map(r => (
                     <button
-                      key={role}
-                      className={`${styles.roleSelectorBtn} ${selectedRole === role ? styles.roleSelectorActive : ''}`}
-                      onClick={() => setSelectedRole(role)}
-                      aria-pressed={selectedRole === role}
+                      key={r}
+                      className={`${styles.roleTabBtn} ${selectedRole === r ? styles.roleTabActive : ''}`}
+                      onClick={() => setSelectedRole(r)}
                     >
-                      <span className={`${styles.roleBadgeSm} ${roleBadgeClass(role)}`} />
-                      <span>{role}</span>
-                      <span className={styles.roleCount}>
-                        {(permissions[role] || []).length}/{PERMISSIONS.length} izin
-                      </span>
+                      {ROLE_MAP[r]}
                     </button>
                   ))}
                 </div>
@@ -539,7 +558,7 @@ export default function UserManagementPage() {
                 <div className={styles.permHead}>
                   <div>
                     <h2 className="card-title" style={{marginBottom:4}}>
-                      Izin untuk: <span className={styles.permRoleName}>{selectedRole}</span>
+                      Izin untuk: <span className={styles.permRoleName}>{ROLE_MAP[selectedRole]}</span>
                     </h2>
                     <p style={{fontSize:'var(--font-size-sm)',color:'var(--color-text-muted)'}}>
                       {(permissions[selectedRole] || []).length} dari {PERMISSIONS.length} izin aktif

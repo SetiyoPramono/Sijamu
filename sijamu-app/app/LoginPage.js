@@ -1,22 +1,45 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import styles from './LoginPage.module.css';
 
+/** Tampilan kartu peran — hanya sebagai panduan visual, bukan filter login */
 const roles = [
+  { value: 'admin',     label: 'Administrator',       desc: 'Mengelola pengguna, RPS, dan konfigurasi sistem' },
   { value: 'auditor',   label: 'Auditor / Asesor',    desc: 'Melakukan evaluasi dan penilaian dokumen mutu' },
-  { value: 'dekan',     label: 'Dekan / Pimpinan',     desc: 'Memantau laporan dan rekap status mutu' },
-  { value: 'koprodi',   label: 'Koordinator Prodi',    desc: 'Mengelola kelengkapan dokumen prodi' },
-  { value: 'taskforce', label: 'Staf / Task Force',    desc: 'Mengunggah dokumen bukti akreditasi' },
+  { value: 'dekan',     label: 'Dekan / Pimpinan',    desc: 'Memantau laporan dan rekap status mutu' },
+  { value: 'koprodi',   label: 'Koordinator Prodi',   desc: 'Mengelola kelengkapan dokumen prodi' },
+  { value: 'taskforce', label: 'Staf / Task Force',   desc: 'Mengunggah dokumen bukti akreditasi' },
 ];
 
+/** Redirect tujuan berdasarkan role user */
+function roleRedirect(role) {
+  switch (role) {
+    case 'auditor':   return '/auditor';
+    case 'taskforce': return '/upload';
+    case 'koprodi':   return '/upload';
+    default:          return '/dashboard';
+  }
+}
+
 export default function LoginPage() {
-  const router = useRouter();
-  const [form, setForm] = useState({ nip: '', password: '', role: '' });
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+  const { login, user, loading: authLoading } = useAuth();
+
+  const [form, setForm]       = useState({ nip: '', password: '' });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError]     = useState('');
   const [showPass, setShowPass] = useState(false);
+
+  // Jika sudah login → redirect
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace(roleRedirect(user.role));
+    }
+  }, [authLoading, user, router]);
 
   const handleChange = (e) => {
     setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
@@ -25,18 +48,24 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.nip || !form.password || !form.role) {
-      setError('Silakan lengkapi semua bidang sebelum melanjutkan.');
+    if (!form.nip.trim() || !form.password) {
+      setError('Silakan isi NIP dan kata sandi Anda.');
       return;
     }
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    if (form.role === 'auditor') {
-      router.push('/auditor');
-    } else if (form.role === 'taskforce' || form.role === 'koprodi') {
-      router.push('/upload');
-    } else {
-      router.push('/dashboard');
+    setError('');
+    try {
+      const loggedUser = await login(form.nip.trim(), form.password);
+
+      // Simpan session cookie agar middleware bisa membacanya
+      document.cookie = `sijamu_session=${encodeURIComponent(JSON.stringify({ role: loggedUser.role, id: loggedUser.id }))}; path=/; max-age=${8 * 3600}; SameSite=Strict`;
+
+      const redirect = searchParams.get('redirect');
+      router.replace(redirect && redirect.startsWith('/') ? redirect : roleRedirect(loggedUser.role));
+    } catch (err) {
+      setError(err.message ?? 'Login gagal. Coba lagi.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -154,27 +183,15 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Role */}
-            <div className="form-group">
-              <label className="form-label">Peran / Jabatan Anda</label>
+            {/* Role info — informatif, bukan input */}
+            <div className={styles.roleInfoSection}>
+              <p className={styles.roleInfoTitle}>Akses berdasarkan akun terdaftar:</p>
               <div className={styles.roleGrid}>
                 {roles.map((r) => (
-                  <label
-                    key={r.value}
-                    className={`${styles.roleCard} ${form.role === r.value ? styles.roleCardActive : ''}`}
-                  >
-                    <input
-                      type="radio"
-                      name="role"
-                      value={r.value}
-                      checked={form.role === r.value}
-                      onChange={handleChange}
-                      className={styles.roleInput}
-                      aria-label={`Peran: ${r.label}`}
-                    />
+                  <div key={r.value} className={styles.roleCard}>
                     <span className={styles.roleLabel}>{r.label}</span>
                     <span className={styles.roleDesc}>{r.desc}</span>
-                  </label>
+                  </div>
                 ))}
               </div>
             </div>

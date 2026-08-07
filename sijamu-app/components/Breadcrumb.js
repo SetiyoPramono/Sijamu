@@ -17,9 +17,13 @@ export default function Breadcrumb({ items }) {
                 </span>
               ) : (
                 <>
-                  <Link href={item.href} className={styles.link}>
-                    {item.label}
-                  </Link>
+                  {item.href ? (
+                    <Link href={item.href} className={styles.link}>
+                      {item.label}
+                    </Link>
+                  ) : (
+                    <span className={styles.link}>{item.label}</span>
+                  )}
                   <span className={styles.separator} aria-hidden="true">›</span>
                 </>
               )}

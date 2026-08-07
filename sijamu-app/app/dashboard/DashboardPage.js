@@ -2,87 +2,91 @@
 // CSS ada di: DashboardPage.module.css
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Breadcrumb from '@/components/Breadcrumb';
 import { ToastContainer, addToast } from '@/components/Toast';
+import { useAuth } from '@/context/AuthContext';
+import { useEvaluation } from '@/context/EvaluationContext';
 import styles from './DashboardPage.module.css';
 
-const trafficData = [
-  { prodi: 'Teknik Informatika',        status: 'success', label: 'Aman',       kelengkapan: 92, missing: 2,  auditor: 'Dr. Ahmad F.' },
-  { prodi: 'Pendidikan Matematika',     status: 'success', label: 'Aman',       kelengkapan: 88, missing: 3,  auditor: 'Prof. Siti R.' },
-  { prodi: 'Manajemen',                 status: 'warning', label: 'Perlu Perhatian', kelengkapan: 61, missing: 12, auditor: 'Dr. Budi S.' },
-  { prodi: 'Pendidikan Bahasa Inggris', status: 'warning', label: 'Perlu Perhatian', kelengkapan: 55, missing: 14, auditor: '-' },
-  { prodi: 'Akuntansi',                 status: 'danger',  label: 'Kritis',     kelengkapan: 28, missing: 22, auditor: '-' },
-  { prodi: 'Pendidikan IPA',            status: 'danger',  label: 'Kritis',     kelengkapan: 15, missing: 27, auditor: '-' },
-  { prodi: 'Hukum',                     status: 'success', label: 'Aman',       kelengkapan: 95, missing: 1,  auditor: 'Dr. Wati N.' },
-];
+/* ── RingCard — SVG circular progress ring ──────────────────────────────── */
+function RingCard({ value, total, label, color, trackColor }) {
+  const SIZE       = 120;
+  const STROKE     = 10;
+  const R          = (SIZE - STROKE) / 2;
+  const CIRC       = 2 * Math.PI * R;
+  const pct        = total > 0 ? value / total : 0;
+  const dashOffset = CIRC * (1 - pct);
 
-const statCards = [
-  { label: 'Total Prodi Diaudit', value: '7',  sub: 'dari 7 prodi aktif',  color: 'primary', icon: '🏫' },
-  { label: 'Dokumen Lengkap',     value: '2',  sub: 'prodi status Aman',   color: 'success', icon: '✅' },
-  { label: 'Perlu Perhatian',     value: '2',  sub: 'prodi status Kuning', color: 'warning', icon: '⚠️' },
-  { label: 'Status Kritis',       value: '2',  sub: 'prodi segera ditindak', color: 'danger', icon: '🚨' },
-];
+  return (
+    <div className={styles.ringCard}>
+      <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} aria-label={`${label}: ${value} dari ${total} prodi`} role="img">
+        <circle cx={SIZE/2} cy={SIZE/2} r={R} fill="none" stroke={trackColor} strokeWidth={STROKE} />
+        <circle
+          cx={SIZE/2} cy={SIZE/2} r={R}
+          fill="none" stroke={color} strokeWidth={STROKE}
+          strokeLinecap="round"
+          strokeDasharray={CIRC} strokeDashoffset={dashOffset}
+          transform={`rotate(-90 ${SIZE/2} ${SIZE/2})`}
+          style={{ transition: 'stroke-dashoffset 1s ease' }}
+        />
+        <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle" fontSize="26" fontWeight="800" fontFamily="Inter, sans-serif" fill={color}>{value}</text>
+        <text x="50%" y="66%" textAnchor="middle" dominantBaseline="middle" fontSize="10" fontWeight="600" fontFamily="Inter, sans-serif" fill="#6B7280">prodi</text>
+      </svg>
+      <div className={styles.ringLabel} style={{ color }}>{label}</div>
+      <div className={styles.ringPct}>{Math.round(pct * 100)}%</div>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
-  const canvasRef = useRef(null);
-  const [chartLoaded, setChartLoaded] = useState(false);
-  const chartRef = useRef(null);
-
-  const totalDocs = trafficData.reduce((s, p) => s + p.kelengkapan, 0);
-  const avgKelengkapan = Math.round(totalDocs / trafficData.length);
-  const totalMissing = trafficData.reduce((s, p) => s + p.missing, 0);
+  const { user } = useAuth();
+  const { evaluations: trafficData, loading: evalLoading } = useEvaluation();
+  const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
-    let chart;
-    const initChart = async () => {
-      const { Chart, ArcElement, DoughnutController, Tooltip, Legend } = await import('chart.js');
-      Chart.register(ArcElement, DoughnutController, Tooltip, Legend);
+    if (!evalLoading) {
+      const timer = setTimeout(() => {
+        setDataLoading(false);
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [evalLoading]);
 
-      if (canvasRef.current) {
-        if (chartRef.current) chartRef.current.destroy();
+  const totalDocs      = trafficData.reduce((s, p) => s + p.kelengkapan, 0);
+  const avgKelengkapan = trafficData.length ? Math.round(totalDocs / trafficData.length) : 0;
+  const totalMissing   = trafficData.reduce((s, p) => s + p.missing, 0);
+  const totalProdi     = trafficData.length;
+  const countAman      = trafficData.filter(p => p.status === 'success').length;
+  const countWarn      = trafficData.filter(p => p.status === 'warning').length;
+  const countDanger    = trafficData.filter(p => p.status === 'danger').length;
 
-        chart = new Chart(canvasRef.current, {
-          type: 'doughnut',
-          data: {
-            labels: ['Aman (Hijau)', 'Perlu Perhatian (Kuning)', 'Kritis (Merah)'],
-            datasets: [{
-              data: [3, 2, 2],
-              backgroundColor: ['#057A55', '#C27803', '#C81E1E'],
-              borderWidth: 0,
-              hoverOffset: 8,
-            }],
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '68%',
-            plugins: {
-              legend: {
-                position: 'bottom',
-                labels: {
-                  font: { size: 14, family: 'Inter', weight: '600' },
-                  padding: 20,
-                  usePointStyle: true,
-                  pointStyleWidth: 12,
-                },
-              },
-              tooltip: {
-                callbacks: {
-                  label: (ctx) => ` ${ctx.label}: ${ctx.raw} prodi`,
-                },
-              },
-            },
-          },
-        });
-        chartRef.current = chart;
-        setChartLoaded(true);
-      }
-    };
-    initChart();
-    return () => { if (chartRef.current) chartRef.current.destroy(); };
-  }, []);
+  const statCards = [
+    { label: 'Total Prodi Diaudit', value: String(totalProdi),  sub: `dari ${totalProdi} prodi aktif`, color: 'primary', icon: '🏫' },
+    { label: 'Status Aman',         value: String(countAman),   sub: 'prodi dokumen lengkap',          color: 'success', icon: '✅' },
+    { label: 'Perlu Perhatian',     value: String(countWarn),   sub: 'prodi segera dilengkapi',        color: 'warning', icon: '⚠️' },
+    { label: 'Status Kritis',       value: String(countDanger), sub: 'prodi segera ditindak',          color: 'danger',  icon: '🚨' },
+  ];
+
+  const period   = new Date().toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+  const greeting = user?.name ? `Halo, ${user.name.split(',')[0]}!` : 'Executive Dashboard';
+
+  if (dataLoading) {
+    return (
+      <div className="app-shell">
+        <Sidebar />
+        <main className="main-content">
+          <div className="page-wrapper">
+            <div className={styles.skeletonGrid}>
+              {[1,2,3,4].map(i => <div key={i} className={`${styles.skeleton} ${styles.skeletonCard}`} />)}
+            </div>
+            <div className={`${styles.skeleton} ${styles.skeletonBody}`} />
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="app-shell">
@@ -98,8 +102,8 @@ export default function DashboardPage() {
 
           <div className="page-header flex items-center justify-between">
             <div>
-              <h1 className="page-title">Executive Dashboard</h1>
-              <p className="page-subtitle">Rekap status mutu seluruh program studi — Periode Agustus 2026</p>
+              <h1 className="page-title">{greeting}</h1>
+              <p className="page-subtitle">Rekap status mutu seluruh program studi — Periode {period}</p>
             </div>
             <button
               className="btn btn-primary"
@@ -128,22 +132,62 @@ export default function DashboardPage() {
           </div>
 
           <div className={styles.dashRow}>
-            {/* Donut Chart */}
+            {/* ── Status Kelengkapan Mutu — SVG Ring Card ── */}
             <div className={`card ${styles.chartCard}`}>
               <h2 className="card-title">Status Kelengkapan Mutu</h2>
-              <div className={styles.chartCenter}>
-                <div className={styles.chartWrap}>
-                  <canvas ref={canvasRef} aria-label="Grafik donat status kelengkapan mutu" role="img" />
-                  <div className={styles.chartOverlay}>
-                    <div className={styles.chartPct}>{avgKelengkapan}%</div>
-                    <div className={styles.chartPctLabel}>Rata-rata<br/>Kelengkapan</div>
-                  </div>
-                </div>
+
+              {/* Three SVG rings */}
+              <div className={styles.ringsRow}>
+                <RingCard
+                  value={countAman}
+                  total={totalProdi}
+                  label="Aman"
+                  color="#057A55"
+                  trackColor="#DEF7EC"
+                />
+                <RingCard
+                  value={countWarn}
+                  total={totalProdi}
+                  label="Perlu Perhatian"
+                  color="#C27803"
+                  trackColor="#FDF6B2"
+                />
+                <RingCard
+                  value={countDanger}
+                  total={totalProdi}
+                  label="Kritis"
+                  color="#C81E1E"
+                  trackColor="#FDE8E8"
+                />
               </div>
-              <div className={styles.chartSummary}>
-                <div className={styles.summaryItem}>
-                  <span className={styles.summaryDot} style={{background:'#C81E1E'}} />
-                  <span><strong>{totalMissing}</strong> Indikator Kurang Dokumen</span>
+
+              {/* Stacked distribution bar */}
+              <div className={styles.distSection}>
+                <div className={styles.distLabel}>
+                  <span>Distribusi {totalProdi} Program Studi</span>
+                  <span className={styles.distAvg}>Rata-rata kelengkapan: <strong>{avgKelengkapan}%</strong></span>
+                </div>
+                <div className={styles.distBar} role="img" aria-label="Distribusi status program studi">
+                  <div
+                    className={styles.distSegment}
+                    style={{ width: `${(countAman / totalProdi) * 100}%`, background: '#057A55' }}
+                    title={`Aman: ${countAman} prodi`}
+                  />
+                  <div
+                    className={styles.distSegment}
+                    style={{ width: `${(countWarn / totalProdi) * 100}%`, background: '#C27803' }}
+                    title={`Perlu Perhatian: ${countWarn} prodi`}
+                  />
+                  <div
+                    className={styles.distSegment}
+                    style={{ width: `${(countDanger / totalProdi) * 100}%`, background: '#C81E1E' }}
+                    title={`Kritis: ${countDanger} prodi`}
+                  />
+                </div>
+                <div className={styles.distLegend}>
+                  <span><span className={styles.legendDot} style={{ background: '#057A55' }} />Aman</span>
+                  <span><span className={styles.legendDot} style={{ background: '#C27803' }} />Perlu Perhatian</span>
+                  <span><span className={styles.legendDot} style={{ background: '#C81E1E' }} />Kritis</span>
                 </div>
               </div>
             </div>
@@ -258,3 +302,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

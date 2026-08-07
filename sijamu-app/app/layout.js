@@ -1,4 +1,10 @@
 import './globals.css';
+import { AuthProvider } from '@/context/AuthContext';
+import { RpsProvider } from '@/context/RpsContext';
+import { PeriodProvider } from '@/context/PeriodContext';
+
+import { MutuProvider } from '@/context/MutuContext';
+import { EvaluationProvider } from '@/context/EvaluationContext';
 
 export const metadata = {
   title: 'SIJAMU 2.0 — Sistem Penjaminan Mutu UNIPGRI Banyuwangi',
@@ -16,7 +22,20 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        {/* AuthProvider harus di luar RpsProvider agar useAuth bisa dipakai di RpsContext */}
+        <AuthProvider>
+          <PeriodProvider>
+            <RpsProvider>
+              <MutuProvider>
+                <EvaluationProvider>
+                  {children}
+                </EvaluationProvider>
+              </MutuProvider>
+            </RpsProvider>
+          </PeriodProvider>
+        </AuthProvider>
+      </body>
     </html>
   );
 }

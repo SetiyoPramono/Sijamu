@@ -2,12 +2,14 @@
 // CSS ada di: UploadPage.module.css
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Breadcrumb from '@/components/Breadcrumb';
 import HelpTooltip from '@/components/HelpTooltip';
 import ConfirmModal from '@/components/ConfirmModal';
 import { ToastContainer, addToast } from '@/components/Toast';
+import { useMutu } from '@/context/MutuContext';
+import { useEvaluation } from '@/context/EvaluationContext';
 import styles from './UploadPage.module.css';
 
 const initialIndicators = [
@@ -35,6 +37,7 @@ export default function UploadPage() {
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null); // indicator id
+  const [activeFeedback, setActiveFeedback] = useState(null);
   const fileInputRef = useRef(null);
 
   const prodiList = [
@@ -46,6 +49,22 @@ export default function UploadPage() {
     'Pendidikan IPA',
     'Hukum',
   ];
+
+  const { mutuDocs, addMutuDoc, deleteMutuDoc } = useMutu();
+  const { docEvaluations } = useEvaluation();
+
+  // Sync indicators with global context when prodi is selected
+  useEffect(() => {
+    if (selectedProdi) {
+      setIndicators(initialIndicators.map(ind => {
+        const existingDoc = mutuDocs.find(d => d.prodi === selectedProdi && d.indicatorId === ind.id);
+        if (existingDoc) {
+          return { ...ind, status: 'done', file: existingDoc.file, globalDocId: existingDoc.id };
+        }
+        return { ...ind, status: 'empty', file: null, globalDocId: null };
+      }));
+    }
+  }, [selectedProdi, mutuDocs]);
 
   const filledCount = indicators.filter(i => i.status === 'done').length;
   const totalCount = indicators.length;
@@ -73,16 +92,22 @@ export default function UploadPage() {
     }
 
     setUploading(true);
-    await new Promise(r => setTimeout(r, 1500 + Math.random() * 1000));
-    setIndicators(prev => prev.map(ind =>
-      ind.id === indicatorId
-        ? { ...ind, status: 'done', file: { name: file.name, size: file.size, type: file.type } }
-        : ind
-    ));
-    setUploading(false);
-    setActiveModal(null);
-    addToast(`✓ Dokumen "${file.name}" berhasil diunggah!`, 'success');
-  }, []);
+    try {
+      const savedFile = await addMutuDoc(selectedProdi, indicatorId, file);
+
+      setIndicators(prev => prev.map(ind =>
+        ind.id === indicatorId
+          ? { ...ind, status: 'done', file: savedFile }
+          : ind
+      ));
+      addToast(`✓ Dokumen "${file.name}" berhasil diunggah!`, 'success');
+    } catch (err) {
+      addToast('Gagal mengunggah dokumen. Silakan coba lagi.', 'error');
+    } finally {
+      setUploading(false);
+      setActiveModal(null);
+    }
+  }, [selectedProdi]);
 
   const handleDrop = useCallback((e) => {
     e.preventDefault();
@@ -97,13 +122,18 @@ export default function UploadPage() {
     e.target.value = '';
   };
 
-  const handleDelete = (id) => {
-    setIndicators(prev => prev.map(ind =>
-      ind.id === id ? { ...ind, status: 'empty', file: null } : ind
+  const handleDelete = async (id) => {
+    const ind = indicators.find(i => i.id === id);
+    if (ind && ind.globalDocId) {
+      await deleteMutuDoc(ind.globalDocId);
+    }
+    setIndicators(prev => prev.map(i =>
+      i.id === id ? { ...i, status: 'empty', file: null, globalDocId: null } : i
     ));
     setConfirmDelete(null);
     addToast('Dokumen berhasil dihapus.', 'info');
   };
+
 
   const formatSize = (bytes) => {
     if (bytes < 1024) return bytes + ' B';
@@ -371,7 +401,14 @@ export default function UploadPage() {
                           </td>
                           <td>
                             {ind.status === 'done' ? (
-                              <span className="badge badge-success">✔ Selesai</span>
+                              <div style={{display:'flex', flexDirection:'column', gap:'4px'}}>
+                                <span className="badge badge-success">✔ Selesai</span>
+                                {docEvaluations?.[`mutu-${ind.globalDocId}`] && (
+                                  <span className={`badge badge-${docEvaluations[`mutu-${ind.globalDocId}`].status === 'warning' ? 'warning' : 'success'}`}>
+                                    {docEvaluations[`mutu-${ind.globalDocId}`].status === 'warning' ? '⚠️ Perlu Revisi' : '✅ Lulus'}
+                                  </span>
+                                )}
+                              </div>
                             ) : (
                               <span className="badge badge-danger">✕ Belum Diunggah</span>
                             )}
@@ -393,6 +430,15 @@ export default function UploadPage() {
                             <div className={styles.actionBtns}>
                               {ind.status === 'done' ? (
                                 <>
+                                  {docEvaluations?.[`mutu-${ind.globalDocId}`]?.status === 'warning' && (
+                                    <button
+                                      className="btn btn-sm btn-warning"
+                                      onClick={() => setActiveFeedback(docEvaluations[`mutu-${ind.globalDocId}`])}
+                                      aria-label="Lihat Catatan Auditor"
+                                    >
+                                      Lihat Catatan
+                                    </button>
+                                  )}
                                   <button
                                     className="btn btn-sm btn-outline"
                                     onClick={() => openModal(ind)}
@@ -450,6 +496,46 @@ export default function UploadPage() {
           )}
         </div>
       </main>
+      
+      {/* Feedback Modal */}
+      {activeFeedback && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999,
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <div className="card" style={{ maxWidth: '500px', width: '90%', padding: '2rem' }}>
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1rem'}}>
+              <h2 style={{margin:0, fontSize:'1.25rem', color:'var(--color-danger)'}}>⚠️ Catatan Revisi Auditor</h2>
+              <button 
+                onClick={() => setActiveFeedback(null)} 
+                className="btn btn-sm btn-ghost"
+                aria-label="Tutup"
+              >
+                ✕
+              </button>
+            </div>
+            <div style={{marginBottom: '1rem'}}>
+              <p style={{fontSize:'0.875rem', color:'var(--color-text-muted)', marginBottom:'4px'}}>Dinilai oleh: {activeFeedback.auditor}</p>
+              <p style={{fontSize:'0.875rem', color:'var(--color-text-muted)'}}>Skor: {activeFeedback.score} / {activeFeedback.maxScore}</p>
+            </div>
+            
+            <div style={{marginBottom: '1rem', background:'var(--color-background-alt)', padding:'1rem', borderRadius:'8px'}}>
+              <h3 style={{fontSize:'0.875rem', fontWeight:600, marginBottom:'8px'}}>Temuan:</h3>
+              <p style={{fontSize:'0.875rem', whiteSpace:'pre-wrap'}}>{activeFeedback.temuan || 'Tidak ada temuan spesifik.'}</p>
+            </div>
+            
+            <div style={{marginBottom: '1.5rem', background:'var(--color-background-alt)', padding:'1rem', borderRadius:'8px'}}>
+              <h3 style={{fontSize:'0.875rem', fontWeight:600, marginBottom:'8px'}}>Catatan Perbaikan:</h3>
+              <p style={{fontSize:'0.875rem', whiteSpace:'pre-wrap'}}>{activeFeedback.catatan || 'Tidak ada catatan.'}</p>
+            </div>
+            
+            <div style={{textAlign:'right'}}>
+              <button className="btn btn-primary" onClick={() => setActiveFeedback(null)}>Mengerti</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
