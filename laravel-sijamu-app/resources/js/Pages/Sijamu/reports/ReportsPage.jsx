@@ -4,7 +4,6 @@ import { useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Breadcrumb from '@/components/Breadcrumb';
 import { ToastContainer, addToast } from '@/components/Toast';
-import styles from './ReportsPage.module.css';
 
 const reportTypes = [
   {
@@ -100,7 +99,7 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          <div className={`card ${styles.filterSection}`}>
+          <div className="card flex flex-wrap gap-4 mb-6">
             <div className="form-group" style={{ flex: 1, minWidth: '250px' }}>
               <label className="form-label">Program Studi</label>
               <select 
@@ -129,31 +128,31 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          <div className={styles.reportsGrid}>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-5">
             {reportTypes.map(report => (
-              <div key={report.id} className={styles.reportCard}>
-                <div className={styles.reportHeader}>
-                  <div className={styles.reportIcon} aria-hidden="true">
+              <div key={report.id} className="flex flex-col p-6 border border-[var(--color-border)] rounded-lg bg-white transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-[var(--color-primary)]">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-[var(--color-primary-light)] text-[var(--color-primary)] rounded-lg flex items-center justify-center" aria-hidden="true">
                     {report.icon}
                   </div>
                   <div>
-                    <h2 className={styles.reportTitle}>{report.title}</h2>
+                    <h2 className="text-lg font-bold text-[var(--color-text)] leading-tight">{report.title}</h2>
                   </div>
                 </div>
-                <p className={styles.reportDesc}>{report.desc}</p>
+                <p className="text-sm text-[var(--color-text-muted)] mt-1">{report.desc}</p>
                 
-                <div className={styles.reportMeta} style={{marginTop: 'var(--space-4)'}}>
-                  <div className={styles.metaItem}>
-                    <span className={styles.metaLabel}>Format Ekspor</span>
-                    <span className={styles.metaValue}>{report.format}</span>
+                <div className="flex flex-col gap-2 mb-5 flex-1" style={{marginTop: 'var(--space-4)'}}>
+                  <div className="flex items-center justify-between text-sm pb-2 border-b border-dashed border-[var(--color-border)]">
+                    <span className="text-[var(--color-text-light)]">Format Ekspor</span>
+                    <span className="font-semibold text-[var(--color-text)]">{report.format}</span>
                   </div>
-                  <div className={styles.metaItem}>
-                    <span className={styles.metaLabel}>Dibuat Terakhir</span>
-                    <span className={styles.metaValue}>{report.lastGenerated}</span>
+                  <div className="flex items-center justify-between text-sm pb-2 border-b border-dashed border-[var(--color-border)]">
+                    <span className="text-[var(--color-text-light)]">Dibuat Terakhir</span>
+                    <span className="font-semibold text-[var(--color-text)]">{report.lastGenerated}</span>
                   </div>
                 </div>
 
-                <div className={styles.reportActions}>
+                <div className="flex gap-2 mt-auto">
                   <button 
                     className="btn btn-primary" 
                     style={{ flex: 1 }}
@@ -176,7 +175,7 @@ export default function ReportsPage() {
           </div>
 
           {/* Tabel Riwayat Laporan */}
-          <div className={`card ${styles.historyTable}`}>
+          <div className={`card mt-8`}>
             <div className="flex justify-between items-center mb-4">
               <h2 className="card-title" style={{marginBottom: 0}}>Riwayat Pembuatan Laporan</h2>
               <button className="btn btn-ghost btn-sm">Lihat Semua</button>

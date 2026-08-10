@@ -10,61 +10,45 @@ import ConfirmModal from '@/components/ConfirmModal';
 import { ToastContainer, addToast } from '@/components/Toast';
 import { useMutu } from '@/context/MutuContext';
 import { useEvaluation } from '@/context/EvaluationContext';
-import styles from './UploadPage.module.css';
-
-const initialIndicators = [
-  { id: 1, kode: 'C1.1', nama: 'Visi, Misi, Tujuan, dan Strategi (VMTS)', status: 'empty', file: null, help: 'Unggah dokumen VMTS yang telah disahkan Rektor. Format: PDF, maks. 10MB.' },
-  { id: 2, kode: 'C1.2', nama: 'Tata Pamong dan Tata Kelola', status: 'empty', file: null, help: 'Dokumen SOP, SK Pengangkatan, dan Struktur Organisasi. Format: PDF.' },
-  { id: 3, kode: 'C1.3', nama: 'Sistem Penjaminan Mutu Internal', status: 'empty', file: null, help: 'Bukti pelaksanaan audit mutu internal: notulen, laporan, tindak lanjut.' },
-  { id: 4, kode: 'C2.1', nama: 'Profil Dosen Tetap', status: 'empty', file: null, help: 'CV dosen, SK dosen tetap, dan data PDDIKTI. Kumpulkan dalam 1 file ZIP.' },
-  { id: 5, kode: 'C2.2', nama: 'Kinerja Dosen (Tri Dharma)', status: 'empty', file: null, help: 'Laporan kinerja dosen: pengajaran, penelitian, pengabdian masyarakat.' },
-  { id: 6, kode: 'C3.1', nama: 'Kurikulum', status: 'empty', file: null, help: 'Dokumen kurikulum yang didalamnya memuat profil lulusan, CPL, dan RPS.' },
-  { id: 7, kode: 'C3.2', nama: 'Pelaksanaan Proses Pembelajaran', status: 'empty', file: null, help: 'Berita acara perkuliahan, absensi, dan hasil evaluasi pembelajaran.' },
-  { id: 8, kode: 'C4.1', nama: 'Penelitian Dosen', status: 'empty', file: null, help: 'Daftar penelitian, kontrak penelitian, dan laporan akhir. Maks. 2 tahun terakhir.' },
-  { id: 9, kode: 'C4.2', nama: 'Pengabdian Kepada Masyarakat', status: 'empty', file: null, help: 'Dokumen PKM: proposal, laporan, dan foto kegiatan.' },
-  { id: 10, kode: 'C5.1', nama: 'Hasil Studi Mahasiswa (IPK & Lama Studi)', status: 'empty', file: null, help: 'Data lulusan 3 tahun terakhir: IPK rata-rata dan rata-rata lama studi.' },
-  { id: 11, kode: 'C5.2', nama: 'Kepuasan Pengguna Lulusan', status: 'empty', file: null, help: 'Hasil tracer study atau kuesioner kepuasan pengguna lulusan.' },
-  { id: 12, kode: 'C6.1', nama: 'Keuangan dan Sarana Prasarana', status: 'empty', file: null, help: 'Laporan keuangan prodi dan daftar inventaris sarana-prasarana.' },
-];
-
+import { useUploadConfig } from '@/context/UploadConfigContext';
 const STEPS = ['Pilih Prodi', 'Unggah Dokumen', 'Selesai'];
 
 export default function UploadPage() {
+  const { mutuDocs, addMutuDoc, deleteMutuDoc } = useMutu();
+  const { docEvaluations } = useEvaluation();
+  const { prodiList, docList } = useUploadConfig();
+
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedProdi, setSelectedProdi] = useState('');
-  const [indicators, setIndicators] = useState(initialIndicators);
-  const [activeModal, setActiveModal] = useState(null); // indicator id
+  const [indicators, setIndicators] = useState([]);
+  const [activeModal, setActiveModal] = useState(null);
   const [dragOver, setDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(null); // indicator id
+  const [confirmDelete, setConfirmDelete] = useState(null);
   const [activeFeedback, setActiveFeedback] = useState(null);
   const fileInputRef = useRef(null);
 
-  const prodiList = [
-    'Teknik Informatika',
-    'Pendidikan Matematika',
-    'Manajemen',
-    'Pendidikan Bahasa Inggris',
-    'Akuntansi',
-    'Pendidikan IPA',
-    'Hukum',
-  ];
+  // Derived data
+  const prodiNames = prodiList.map(p => p.nama);
+  const buildIndicators = () => docList.map(d => ({
+    id: d.id, kode: d.kode, nama: d.nama, help: d.help, status: 'empty', file: null,
+  }));
 
-  const { mutuDocs, addMutuDoc, deleteMutuDoc } = useMutu();
-  const { docEvaluations } = useEvaluation();
-
-  // Sync indicators with global context when prodi is selected
+  // Sync indicators when prodi changes or docList changes
   useEffect(() => {
+    const base = buildIndicators();
     if (selectedProdi) {
-      setIndicators(initialIndicators.map(ind => {
+      setIndicators(base.map(ind => {
         const existingDoc = mutuDocs.find(d => d.prodi === selectedProdi && d.indicatorId === ind.id);
         if (existingDoc) {
           return { ...ind, status: 'done', file: existingDoc.file, globalDocId: existingDoc.id };
         }
         return { ...ind, status: 'empty', file: null, globalDocId: null };
       }));
+    } else {
+      setIndicators(base);
     }
-  }, [selectedProdi, mutuDocs]);
+  }, [selectedProdi, mutuDocs, docList]);
 
   const filledCount = indicators.filter(i => i.status === 'done').length;
   const totalCount = indicators.length;
@@ -154,19 +138,19 @@ export default function UploadPage() {
         <ToastContainer />
         <main className="main-content">
           <div className="page-wrapper">
-            <div className={styles.successScreen}>
-              <div className={styles.successIcon}>🎉</div>
-              <h1 className={styles.successTitle}>Pengunggahan Selesai!</h1>
-              <p className={styles.successMsg}>
+            <div className="flex flex-col items-center justify-center min-h-[60vh] text-center gap-5 p-10">
+              <div className="text-[80px]">🎉</div>
+              <h1 className="text-3xl font-extrabold text-[var(--color-success)]">Pengunggahan Selesai!</h1>
+              <p className="text-lg text-[var(--color-text-muted)] leading-[1.7]">
                 <strong>{filledCount} dari {totalCount}</strong> dokumen berhasil diunggah untuk{' '}
                 <strong>{selectedProdi}</strong>.
               </p>
               {filledCount < totalCount && (
-                <div className={styles.missingWarn}>
+                <div className="py-4 px-5 bg-[var(--color-warning-light)] border border-[rgba(194,120,3,0.3)] rounded-lg text-base text-[var(--color-warning)] font-semibold">
                   ⚠️ {totalCount - filledCount} dokumen belum diunggah. Anda masih bisa melengkapinya nanti.
                 </div>
               )}
-              <div className={styles.successActions}>
+              <div className="flex gap-4 mt-3">
                 <button className="btn btn-ghost" onClick={() => setCurrentStep(2)}>
                   ← Kembali Lengkapi
                 </button>
@@ -195,15 +179,15 @@ export default function UploadPage() {
           aria-modal="true"
           aria-labelledby="upload-modal-title"
         >
-          <div className={styles.uploadModalBox}>
-            <div className={styles.uploadModalHeader}>
+          <div className="bg-white rounded-xl shadow-xl p-8 max-w-[560px] w-full animate-[scaleIn_0.2s_ease]">
+            <div className="flex items-start justify-between gap-4 mb-6">
               <div>
-                <span className={styles.uploadModalKode}>{modalIndicator.kode}</span>
-                <h2 id="upload-modal-title" className={styles.uploadModalTitle}>{modalIndicator.nama}</h2>
-                <p className={styles.uploadModalHelp}>{modalIndicator.help}</p>
+                <span className="inline-block bg-[var(--color-primary-light)] text-[var(--color-primary)] py-1 px-[10px] rounded-sm text-xs font-bold mb-2">{modalIndicator.kode}</span>
+                <h2 id="upload-modal-title" className="text-xl font-bold text-[var(--color-text)] mb-2">{modalIndicator.nama}</h2>
+                <p className="text-sm text-[var(--color-text-muted)] leading-[1.6]">{modalIndicator.help}</p>
               </div>
               <button
-                className={styles.modalCloseBtn}
+                className="shrink-0 w-9 h-9 rounded-md flex items-center justify-center text-[var(--color-text-light)] transition-colors cursor-pointer bg-transparent border-none hover:not(:disabled):bg-[var(--color-bg)] hover:not(:disabled):text-[var(--color-text)]"
                 onClick={() => !uploading && setActiveModal(null)}
                 aria-label="Tutup dialog unggah"
                 disabled={uploading}
@@ -215,14 +199,14 @@ export default function UploadPage() {
             </div>
 
             {uploading ? (
-              <div className={styles.uploadingState}>
+              <div className="flex flex-col items-center gap-4 p-8 text-center text-lg font-semibold text-[var(--color-text)]">
                 <div className="spinner" aria-hidden="true" />
                 <p>Sedang mengunggah dokumen...</p>
-                <p className={styles.uploadingNote}>Mohon tunggu, jangan tutup jendela ini</p>
+                <p className="text-sm text-[var(--color-text-muted)] font-normal">Mohon tunggu, jangan tutup jendela ini</p>
               </div>
             ) : (
               <div
-                className={`${styles.dropZone} ${dragOver ? styles.dropZoneActive : ''}`}
+                className={`group border-[3px] border-dashed border-[var(--color-border)] rounded-xl py-10 px-6 text-center cursor-pointer transition-all flex flex-col items-center gap-3 hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-light)] focus-visible:outline focus-visible:outline-3 focus-visible:outline-[var(--color-primary)] focus-visible:outline-offset-2 focus-visible:border-[var(--color-primary)] focus-visible:bg-[var(--color-primary-light)] ${dragOver ? '!border-[var(--color-primary)] !bg-[var(--color-primary-light)] scale-[1.01]' : ''}`}
                 onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                 onDragLeave={() => setDragOver(false)}
                 onDrop={handleDrop}
@@ -232,18 +216,18 @@ export default function UploadPage() {
                 onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
                 aria-label="Area drag and drop untuk mengunggah file"
               >
-                <div className={styles.dropIcon} aria-hidden="true">
+                <div className={`text-[var(--color-primary)] opacity-70 transition-transform ${dragOver ? 'opacity-100 -translate-y-1' : ''}`} aria-hidden="true">
                   <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                     <polyline points="17 8 12 3 7 8"/>
                     <line x1="12" y1="3" x2="12" y2="15"/>
                   </svg>
                 </div>
-                <p className={styles.dropTitle}>
+                <p className="text-xl font-bold text-[var(--color-text)]">
                   {dragOver ? '✓ Lepaskan file di sini' : 'Seret & Lepas file di sini'}
                 </p>
-                <p className={styles.dropSub}>atau klik untuk memilih file dari komputer</p>
-                <div className={styles.dropFormats}>
+                <p className="text-sm text-[var(--color-text-muted)]">atau klik untuk memilih file dari komputer</p>
+                <div className="flex gap-2 flex-wrap justify-center">
                   <span className="badge badge-info">PDF</span>
                   <span className="badge badge-info">ZIP</span>
                   <span className="badge badge-info">JPG/PNG</span>
@@ -253,7 +237,7 @@ export default function UploadPage() {
                   ref={fileInputRef}
                   type="file"
                   accept=".pdf,.zip,.jpg,.jpeg,.png"
-                  className={styles.hiddenInput}
+                  className="absolute opacity-0 w-0 h-0 pointer-events-none"
                   onChange={handleFileSelect}
                   aria-hidden="true"
                   tabIndex={-1}
@@ -309,16 +293,16 @@ export default function UploadPage() {
 
           {/* Step 1: Pilih Prodi */}
           {currentStep === 1 && (
-            <div className={`card ${styles.prodiCard}`}>
+            <div className={`card max-w-[720px]`}>
               <h2 className="card-title">Pilih Program Studi</h2>
-              <p className={styles.prodiNote}>
+              <p className="text-base text-[var(--color-text-muted)] mb-6 leading-[1.7]">
                 Pilih program studi yang akan Anda lengkapi dokumennya. Pastikan Anda hanya mengunggah dokumen untuk prodi yang menjadi tanggung jawab Anda.
               </p>
-              <div className={styles.prodiGrid}>
-                {prodiList.map((prodi) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+                {prodiNames.map((prodi) => (
                   <label
                     key={prodi}
-                    className={`${styles.prodiOption} ${selectedProdi === prodi ? styles.prodiOptionActive : ''}`}
+                    className={`flex items-center gap-3 px-5 py-4 border-2 border-[var(--color-border)] rounded-lg cursor-pointer transition-all hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-light)] ${selectedProdi === prodi ? '!border-[var(--color-primary)] !bg-[var(--color-primary-light)] shadow-[0_0_0_3px_rgba(26,86,219,0.15)]' : ''}`}
                   >
                     <input
                       type="radio"
@@ -326,17 +310,17 @@ export default function UploadPage() {
                       value={prodi}
                       checked={selectedProdi === prodi}
                       onChange={() => setSelectedProdi(prodi)}
-                      className={styles.hiddenRadio}
+                      className="absolute opacity-0 w-0 h-0"
                       aria-label={`Pilih prodi ${prodi}`}
                     />
-                    <span className={styles.prodiCheck} aria-hidden="true">
+                    <span className={`w-[26px] h-[26px] rounded-full border-2 border-[var(--color-border)] flex items-center justify-center font-bold text-sm shrink-0 transition-all text-transparent ${selectedProdi === prodi ? '!bg-[var(--color-primary)] !border-[var(--color-primary)] !text-white' : ''}`} aria-hidden="true">
                       {selectedProdi === prodi ? '✓' : ''}
                     </span>
-                    <span className={styles.prodiName}>{prodi}</span>
+                    <span className={`text-base font-semibold text-[var(--color-text)] ${selectedProdi === prodi ? '!text-[var(--color-primary)]' : ''}`}>{prodi}</span>
                   </label>
                 ))}
               </div>
-              <div className={styles.prodiActions}>
+              <div className="flex justify-end">
                 <button
                   className="btn btn-primary btn-lg"
                   onClick={handleProdiNext}
@@ -352,15 +336,15 @@ export default function UploadPage() {
           {currentStep === 2 && (
             <div>
               {/* Progress summary */}
-              <div className={`card ${styles.progressSummary}`}>
-                <div className={styles.progressInfo}>
+              <div className={`card`}>
+                <div className="flex items-center justify-between">
                   <div>
-                    <div className={styles.progressProdi}>{selectedProdi}</div>
-                    <div className={styles.progressLabel}>
-                      <span className={styles.progressNum}>{filledCount}</span> dari {totalCount} dokumen diunggah
+                    <div className="text-lg font-bold text-[var(--color-text)]">{selectedProdi}</div>
+                    <div className="text-base text-[var(--color-text-muted)] mt-1">
+                      <span className="font-extrabold text-[var(--color-primary)] text-xl">{filledCount}</span> dari {totalCount} dokumen diunggah
                     </div>
                   </div>
-                  <div className={styles.progressPct}>{pct}%</div>
+                  <div className="text-[42px] font-extrabold text-[var(--color-primary)] tracking-[-0.02em]">{pct}%</div>
                 </div>
                 <div className="progress-bar-track" style={{marginTop:'var(--space-3)'}}>
                   <div className="progress-bar-fill" style={{width:`${pct}%`}} />
@@ -387,14 +371,14 @@ export default function UploadPage() {
                       {indicators.map((ind, i) => (
                         <tr
                           key={ind.id}
-                          className={ind.status === 'done' ? styles.rowDone : styles.rowEmpty}
+                          className={ind.status === 'done' ? '!bg-[rgba(5,122,85,0.03)]' : '!bg-transparent'}
                         >
                           <td>{i + 1}</td>
                           <td>
-                            <span className={styles.kodeChip}>{ind.kode}</span>
+                            <span className="bg-[var(--color-primary-light)] text-[var(--color-primary)] px-2 py-1 rounded-sm text-xs font-bold whitespace-nowrap">{ind.kode}</span>
                           </td>
                           <td>
-                            <span className={styles.indName}>{ind.nama}</span>
+                            <span className="text-base font-medium">{ind.nama}</span>
                           </td>
                           <td>
                             <HelpTooltip title={ind.kode} content={ind.help} />
@@ -415,19 +399,19 @@ export default function UploadPage() {
                           </td>
                           <td>
                             {ind.file ? (
-                              <div className={styles.fileInfo}>
+                              <div className="flex items-center gap-1 max-w-[200px]">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
                                 </svg>
-                                <span className={styles.fileName} title={ind.file.name}>{ind.file.name}</span>
-                                <span className={styles.fileSize}>{formatSize(ind.file.size)}</span>
+                                <span className="text-xs text-[var(--color-text-muted)] overflow-hidden text-ellipsis whitespace-nowrap flex-1" title={ind.file.name}>{ind.file.name}</span>
+                                <span className="text-xs text-[var(--color-text-light)] shrink-0">{formatSize(ind.file.size)}</span>
                               </div>
                             ) : (
                               <span className="text-muted" style={{fontSize:'var(--font-size-sm)'}}>—</span>
                             )}
                           </td>
                           <td>
-                            <div className={styles.actionBtns}>
+                            <div className="flex gap-2 items-center">
                               {ind.status === 'done' ? (
                                 <>
                                   {docEvaluations?.[`mutu-${ind.globalDocId}`]?.status === 'warning' && (
@@ -456,7 +440,7 @@ export default function UploadPage() {
                                 </>
                               ) : (
                                 <button
-                                  className={`btn btn-sm btn-primary ${styles.uploadBtn}`}
+                                  className={`btn btn-sm btn-primary !font-bold`}
                                   onClick={() => openModal(ind)}
                                   aria-label={`Unggah dokumen untuk ${ind.nama}`}
                                 >
@@ -475,7 +459,7 @@ export default function UploadPage() {
                   </table>
                 </div>
 
-                <div className={styles.checklistFooter}>
+                <div className="flex justify-between items-center mt-6 pt-5 border-t border-[var(--color-border)]">
                   <button
                     className="btn btn-ghost"
                     onClick={() => setCurrentStep(1)}

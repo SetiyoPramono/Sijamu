@@ -37,6 +37,9 @@ Route::prefix('admin')->group(function() {
     Route::get('/settings', function () {
         return Inertia::render('Sijamu/admin/settings/page');
     });
+    Route::get('/upload', function () {
+        return Inertia::render('Sijamu/admin/upload/page');
+    });
 });
 
 require __DIR__.'/auth.php';

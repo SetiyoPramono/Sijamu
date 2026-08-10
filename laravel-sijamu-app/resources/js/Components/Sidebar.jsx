@@ -4,7 +4,6 @@ import { usePage } from '@inertiajs/react';
 import { Link } from '@inertiajs/react';
 import { useAuth } from '@/context/AuthContext';
 import { usePeriod } from '@/context/PeriodContext';
-import styles from './Sidebar.module.css';
 
 /* ── Nav groups dengan kontrol akses per role ─────────────────
    allowedRoles: undefined → semua role bisa akses
@@ -108,6 +107,21 @@ const navGroups = [
         ),
       },
       {
+        href: '/admin/upload',
+        label: 'Manajemen Upload',
+        allowedRoles: ['admin'],
+        icon: (
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+            <circle cx="19" cy="5" r="3" fill="currentColor" stroke="none"/>
+            <line x1="19" y1="4" x2="19" y2="6" stroke="white" strokeWidth="1.5"/>
+            <line x1="18" y1="5" x2="20" y2="5" stroke="white" strokeWidth="1.5"/>
+          </svg>
+        ),
+      },
+      {
         href: '/admin/settings',
         label: 'Pengaturan',
         allowedRoles: ['admin'],
@@ -139,29 +153,30 @@ export default function Sidebar() {
   const userRole    = user?.role;
 
   // Filter grup dan item berdasarkan role
+  // Jika userRole null/undefined (belum login), sembunyikan item yang punya allowedRoles
   const visibleGroups = navGroups
-    .filter(g => !g.allowedRoles || !userRole || g.allowedRoles.includes(userRole))
+    .filter(g => !g.allowedRoles || (userRole && g.allowedRoles.includes(userRole)))
     .map(g => ({
       ...g,
       items: g.items.filter(
-        item => !item.allowedRoles || !userRole || item.allowedRoles.includes(userRole)
+        item => !item.allowedRoles || (userRole && item.allowedRoles.includes(userRole))
       ),
     }))
     .filter(g => g.items.length > 0);
 
   return (
-    <aside className={styles.sidebar} aria-label="Menu navigasi utama">
+    <aside className="fixed top-0 left-0 w-[var(--sidebar-width)] h-screen bg-[var(--sidebar-bg)] flex flex-col p-5 z-[100] overflow-y-auto overflow-x-hidden shadow-[4px_0_20px_rgba(0,0,0,0.15)] max-lg:-translate-x-full max-lg:transition-transform max-lg:duration-300" aria-label="Menu navigasi utama">
       {/* Logo */}
-      <div className={styles.logo}>
-        <div className={styles.logoIcon}>
+      <div className="flex items-center gap-3 py-3 px-1 mb-6 border-b border-white/10 pb-5">
+        <div className="w-11 h-11 bg-[var(--color-primary)] rounded-md flex items-center justify-center shrink-0 shadow-[0_4px_12px_rgba(26,86,219,0.4)]">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
             <path d="M6 12v5c3 3 9 3 12 0v-5"/>
           </svg>
         </div>
         <div>
-          <div className={styles.logoName}>SIJAMU 2.0</div>
-          <div className={styles.logoSub}>UNIPGRI Banyuwangi</div>
+          <div className="text-lg font-extrabold text-white leading-[1.2] tracking-[-0.01em]">SIJAMU 2.0</div>
+          <div className="text-xs text-[var(--sidebar-text)] opacity-75 leading-[1.3]">UNIPGRI Banyuwangi</div>
         </div>
       </div>
 
@@ -194,23 +209,23 @@ export default function Sidebar() {
       </div>
 
       {/* Nav */}
-      <nav className={styles.nav} role="navigation">
+      <nav className="flex-1 flex flex-col gap-6" role="navigation">
         {visibleGroups.map((group) => (
-          <div key={group.label} className={styles.navSection}>
-            <span className={styles.navSectionLabel}>{group.label}</span>
-            <ul className={styles.navList}>
+          <div key={group.label} className="flex flex-col gap-1">
+            <span className="text-xs font-bold uppercase tracking-[0.1em] text-[#c8d8f880] px-3 mb-2">{group.label}</span>
+            <ul className="list-none flex flex-col gap-1 m-0 p-0">
               {group.items.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
                 return (
                   <li key={item.href + item.label}>
                     <Link
                       href={item.href}
-                      className={`${styles.navLink} ${isActive ? styles.active : ''}`}
+                      className={`flex items-center gap-3 py-3 px-3 rounded-md text-[var(--sidebar-text)] text-base font-medium transition-colors hover:bg-white/10 hover:text-white relative no-underline ${isActive ? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] font-semibold shadow-[0_4px_12px_rgba(26,86,219,0.35)]' : ''}`}
                       aria-current={isActive ? 'page' : undefined}
                     >
-                      <span className={styles.navIcon} aria-hidden="true">{item.icon}</span>
-                      <span className={styles.navLabel}>{item.label}</span>
-                      {isActive && <span className={styles.activeIndicator} />}
+                      <span className="flex items-center justify-center shrink-0 w-[22px]" aria-hidden="true">{item.icon}</span>
+                      <span className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis">{item.label}</span>
+                      {isActive && <span className="w-1.5 h-1.5 rounded-full bg-white/80 shrink-0" />}
                     </Link>
                   </li>
                 );
@@ -221,16 +236,16 @@ export default function Sidebar() {
       </nav>
 
       {/* User info */}
-      <div className={styles.userCard}>
-        <div className={styles.userAvatar} aria-hidden="true">
+      <div className="flex items-center gap-3 p-3 bg-white/10 rounded-md border-t border-white/10 pt-4 mt-auto">
+        <div className="w-[38px] h-[38px] bg-[var(--color-primary)] rounded-full flex items-center justify-center font-bold text-white text-base shrink-0" aria-hidden="true">
           {user?.name?.[0]?.toUpperCase() ?? '?'}
         </div>
-        <div className={styles.userInfo}>
-          <div className={styles.userName}>{user?.name ?? 'Pengguna'}</div>
-          <div className={styles.userRole}>{ROLE_LABELS[userRole] ?? userRole ?? '—'}</div>
+        <div className="flex-1 overflow-hidden">
+          <div className="text-sm font-semibold text-white whitespace-nowrap overflow-hidden text-ellipsis">{user?.name ?? 'Pengguna'}</div>
+          <div className="text-xs text-[var(--sidebar-text)] opacity-75">{ROLE_LABELS[userRole] ?? userRole ?? '—'}</div>
         </div>
         <button
-          className={styles.logoutBtn}
+          className="w-8 h-8 flex items-center justify-center rounded-md text-[var(--sidebar-text)] transition-colors hover:bg-red-500/30 hover:text-red-300"
           onClick={logout}
           aria-label="Keluar dari sistem"
           title="Keluar"
@@ -245,3 +260,4 @@ export default function Sidebar() {
     </aside>
   );
 }
+

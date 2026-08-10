@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect } from 'react';
-import styles from './ConfirmModal.module.css';
 
 export default function ConfirmModal({
   isOpen,
@@ -41,7 +40,7 @@ export default function ConfirmModal({
       aria-labelledby="confirm-modal-title"
     >
       <div className="modal-box">
-        <div className={styles.iconWrap}>
+        <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5 ${type === 'danger' ? 'bg-[var(--color-danger-light)]' : 'bg-orange-100'}`}>
           {type === 'danger' ? (
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-danger)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>

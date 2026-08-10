@@ -4,7 +4,6 @@ import { useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Breadcrumb from '@/components/Breadcrumb';
 import { ToastContainer, addToast } from '@/components/Toast';
-import styles from './SettingsPage.module.css';
 
 const TABS = [
   { id: 'umum', label: 'Pengaturan Umum', icon: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' },
@@ -58,13 +57,17 @@ export default function SettingsPage() {
             </button>
           </div>
 
-          <div className={styles.settingsLayout}>
+          <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-6 items-start">
             {/* Sidebar Menu */}
-            <div className={styles.settingsMenu}>
+            <div className="static md:sticky md:top-4 flex flex-row md:flex-col gap-1 overflow-x-auto md:overflow-visible pb-2 md:pb-0">
               {TABS.map(tab => (
                 <button
                   key={tab.id}
-                  className={`${styles.menuItem} ${activeTab === tab.id ? styles.menuItemActive : ''}`}
+                  className={`flex items-center gap-3 py-3 px-4 rounded-md text-sm font-semibold cursor-pointer border-none text-left transition-all whitespace-nowrap md:whitespace-normal ${
+                    activeTab === tab.id 
+                      ? 'bg-[var(--color-primary-light)] text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] hover:text-[var(--color-primary)]' 
+                      : 'bg-transparent text-[var(--color-text-muted)] hover:bg-[var(--color-bg)] hover:text-[var(--color-text)]'
+                  }`}
                   onClick={() => setActiveTab(tab.id)}
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -76,17 +79,17 @@ export default function SettingsPage() {
             </div>
 
             {/* Content Area */}
-            <div className={`card ${styles.settingsContent}`}>
+            <div className="card flex flex-col gap-6">
               
               {activeTab === 'umum' && (
                 <>
-                  <div className={styles.sectionHeader}>
-                    <h2 className={styles.sectionTitle}>Pengaturan Umum</h2>
-                    <p className={styles.sectionDesc}>Informasi institusi dan parameter tahun akademik berjalan.</p>
+                  <div className="mb-4 pb-3 border-b border-[var(--color-border)]">
+                    <h2 className="text-xl font-bold text-[var(--color-text)]">Pengaturan Umum</h2>
+                    <p className="text-sm text-[var(--color-text-muted)] mt-1">Informasi institusi dan parameter tahun akademik berjalan.</p>
                   </div>
                   
-                  <div className={styles.formGrid}>
-                    <div className={`form-group ${styles.fullWidth}`}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="form-group col-span-1 md:col-span-2">
                       <label className="form-label">Nama Institusi</label>
                       <input 
                         type="text" 
@@ -119,31 +122,31 @@ export default function SettingsPage() {
 
               {activeTab === 'notifikasi' && (
                 <>
-                  <div className={styles.sectionHeader}>
-                    <h2 className={styles.sectionTitle}>Notifikasi & Pemberitahuan</h2>
-                    <p className={styles.sectionDesc}>Atur bagaimana sistem mengirimkan pemberitahuan kepada pengguna.</p>
+                  <div className="mb-4 pb-3 border-b border-[var(--color-border)]">
+                    <h2 className="text-xl font-bold text-[var(--color-text)]">Notifikasi & Pemberitahuan</h2>
+                    <p className="text-sm text-[var(--color-text-muted)] mt-1">Atur bagaimana sistem mengirimkan pemberitahuan kepada pengguna.</p>
                   </div>
                   
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-                    <div className={styles.settingItem}>
-                      <div className={styles.settingItemInfo}>
-                        <h3>Notifikasi Email</h3>
-                        <p>Kirim pemberitahuan status dokumen dan hasil evaluasi via email institusi.</p>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center p-4 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md gap-4">
+                      <div>
+                        <h3 className="text-base font-semibold text-[var(--color-text)] mb-0.5">Notifikasi Email</h3>
+                        <p className="text-xs text-[var(--color-text-muted)]">Kirim pemberitahuan status dokumen dan hasil evaluasi via email institusi.</p>
                       </div>
-                      <label className={styles.toggleSwitch}>
-                        <input type="checkbox" className={styles.toggleInput} checked={emailNotif} onChange={(e) => setEmailNotif(e.target.checked)} />
-                        <span className={styles.toggleSlider}></span>
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input type="checkbox" className="sr-only peer" checked={emailNotif} onChange={(e) => setEmailNotif(e.target.checked)} />
+                        <div className="w-11 h-6 bg-[var(--color-border)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:bg-[var(--color-primary)]"></div>
                       </label>
                     </div>
 
-                    <div className={styles.settingItem}>
-                      <div className={styles.settingItemInfo}>
-                        <h3>Notifikasi WhatsApp</h3>
-                        <p>Kirim pesan pengingat ke nomor WhatsApp pengguna yang terdaftar.</p>
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center p-4 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md gap-4">
+                      <div>
+                        <h3 className="text-base font-semibold text-[var(--color-text)] mb-0.5">Notifikasi WhatsApp</h3>
+                        <p className="text-xs text-[var(--color-text-muted)]">Kirim pesan pengingat ke nomor WhatsApp pengguna yang terdaftar.</p>
                       </div>
-                      <label className={styles.toggleSwitch}>
-                        <input type="checkbox" className={styles.toggleInput} checked={waNotif} onChange={(e) => setWaNotif(e.target.checked)} />
-                        <span className={styles.toggleSlider}></span>
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input type="checkbox" className="sr-only peer" checked={waNotif} onChange={(e) => setWaNotif(e.target.checked)} />
+                        <div className="w-11 h-6 bg-[var(--color-border)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:bg-[var(--color-primary)]"></div>
                       </label>
                     </div>
                   </div>
@@ -152,31 +155,31 @@ export default function SettingsPage() {
 
               {activeTab === 'sistem' && (
                 <>
-                  <div className={styles.sectionHeader}>
-                    <h2 className={styles.sectionTitle}>Sistem & Backup</h2>
-                    <p className={styles.sectionDesc}>Manajemen penyimpanan dan cadangan basis data.</p>
+                  <div className="mb-4 pb-3 border-b border-[var(--color-border)]">
+                    <h2 className="text-xl font-bold text-[var(--color-text)]">Sistem & Backup</h2>
+                    <p className="text-sm text-[var(--color-text-muted)] mt-1">Manajemen penyimpanan dan cadangan basis data.</p>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-                    <div className={styles.settingItem}>
-                      <div className={styles.settingItemInfo}>
-                        <h3>Backup Otomatis</h3>
-                        <p>Sistem akan membuat cadangan data setiap minggu secara otomatis.</p>
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center p-4 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md gap-4">
+                      <div>
+                        <h3 className="text-base font-semibold text-[var(--color-text)] mb-0.5">Backup Otomatis</h3>
+                        <p className="text-xs text-[var(--color-text-muted)]">Sistem akan membuat cadangan data setiap minggu secara otomatis.</p>
                       </div>
-                      <label className={styles.toggleSwitch}>
-                        <input type="checkbox" className={styles.toggleInput} checked={autoBackup} onChange={(e) => setAutoBackup(e.target.checked)} />
-                        <span className={styles.toggleSlider}></span>
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input type="checkbox" className="sr-only peer" checked={autoBackup} onChange={(e) => setAutoBackup(e.target.checked)} />
+                        <div className="w-11 h-6 bg-[var(--color-border)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:bg-[var(--color-primary)]"></div>
                       </label>
                     </div>
 
-                    <div className={styles.settingItem}>
-                      <div className={styles.settingItemInfo}>
-                        <h3>Mode Pemeliharaan (Maintenance)</h3>
-                        <p>Hanya Administrator yang dapat login. Berguna saat update sistem.</p>
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center p-4 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md gap-4">
+                      <div>
+                        <h3 className="text-base font-semibold text-[var(--color-text)] mb-0.5">Mode Pemeliharaan (Maintenance)</h3>
+                        <p className="text-xs text-[var(--color-text-muted)]">Hanya Administrator yang dapat login. Berguna saat update sistem.</p>
                       </div>
-                      <label className={styles.toggleSwitch}>
-                        <input type="checkbox" className={styles.toggleInput} />
-                        <span className={styles.toggleSlider}></span>
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input type="checkbox" className="sr-only peer" />
+                        <div className="w-11 h-6 bg-[var(--color-border)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:bg-[var(--color-primary)]"></div>
                       </label>
                     </div>
 

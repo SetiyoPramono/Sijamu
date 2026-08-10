@@ -2,9 +2,9 @@ import './globals.css';
 import { AuthProvider } from '@/context/AuthContext';
 import { RpsProvider } from '@/context/RpsContext';
 import { PeriodProvider } from '@/context/PeriodContext';
-
 import { MutuProvider } from '@/context/MutuContext';
 import { EvaluationProvider } from '@/context/EvaluationContext';
+import { UploadConfigProvider } from '@/context/UploadConfigContext';
 
 export const metadata = {
   title: 'SIJAMU 2.0 — Sistem Penjaminan Mutu UNIPGRI Banyuwangi',
@@ -27,11 +27,13 @@ export default function RootLayout({ children }) {
         <AuthProvider>
           <PeriodProvider>
             <RpsProvider>
-              <MutuProvider>
-                <EvaluationProvider>
-                  {children}
-                </EvaluationProvider>
-              </MutuProvider>
+              <UploadConfigProvider>
+                <MutuProvider>
+                  <EvaluationProvider>
+                    {children}
+                  </EvaluationProvider>
+                </MutuProvider>
+              </UploadConfigProvider>
             </RpsProvider>
           </PeriodProvider>
         </AuthProvider>

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import styles from './HelpTooltip.module.css';
 
 export default function HelpTooltip({ title, content }) {
   const [open, setOpen] = useState(false);
@@ -18,9 +17,9 @@ export default function HelpTooltip({ title, content }) {
   }, []);
 
   return (
-    <span className={styles.wrapper} ref={ref}>
+    <span className="relative inline-block align-middle" ref={ref}>
       <button
-        className={styles.trigger}
+        className="w-[22px] h-[22px] rounded-full bg-[var(--color-primary)] text-white text-[13px] font-bold border-none cursor-pointer inline-flex items-center justify-center transition-all duration-150 shrink-0 ml-2 hover:bg-[var(--color-primary-dark)] hover:scale-110 focus-visible:outline focus-visible:outline-3 focus-visible:outline-[var(--color-primary)] focus-visible:outline-offset-2"
         onClick={() => setOpen((v) => !v)}
         aria-label={`Bantuan: ${title}`}
         aria-expanded={open}
@@ -29,8 +28,8 @@ export default function HelpTooltip({ title, content }) {
         ?
       </button>
       {open && (
-        <div className={styles.popup} role="tooltip">
-          <div className={styles.popupHeader}>
+        <div className="absolute bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 bg-white rounded-lg shadow-lg border border-[var(--color-border)] p-4 min-w-[280px] max-w-[340px] z-[500]" role="tooltip">
+          <div className="flex items-center gap-2 mb-3 text-base font-semibold text-[var(--color-text)]">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <circle cx="12" cy="12" r="10"/>
               <line x1="12" y1="8" x2="12" y2="12"/>
@@ -38,9 +37,9 @@ export default function HelpTooltip({ title, content }) {
             </svg>
             <strong>{title}</strong>
           </div>
-          <p className={styles.popupBody}>{content}</p>
+          <p className="text-sm text-[var(--color-text-muted)] leading-[1.7] mb-3">{content}</p>
           <button
-            className={styles.closeBtn}
+            className="text-sm font-semibold text-[var(--color-primary)] bg-transparent border-none cursor-pointer p-0 underline hover:text-[var(--color-primary-dark)]"
             onClick={() => setOpen(false)}
             aria-label="Tutup bantuan"
           >
@@ -51,3 +50,4 @@ export default function HelpTooltip({ title, content }) {
     </span>
   );
 }
+

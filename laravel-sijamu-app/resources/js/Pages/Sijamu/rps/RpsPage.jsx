@@ -6,7 +6,6 @@ import { ToastContainer, addToast } from '@/components/Toast';
 import { useRps } from '@/context/RpsContext';
 import { usePeriod } from '@/context/PeriodContext';
 import { useEvaluation } from '@/context/EvaluationContext';
-import styles from './RpsPage.module.css';
 import { useState, useRef } from 'react';
 
 /** Format bytes to human-readable string */
@@ -83,12 +82,12 @@ export default function RpsPage() {
         <Sidebar />
         <main className="main-content">
           <div className="page-wrapper">
-            <div className={styles.emptyGlobal}>
+            <div className="flex flex-col items-center justify-center text-center gap-4 p-10 text-[var(--color-text-muted)] min-h-[60vh]">
               <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
               </svg>
-              <h2>Belum ada mata kuliah</h2>
-              <p>Tambahkan mata kuliah terlebih dahulu di halaman <strong>Manajemen RPS</strong>.</p>
+              <h2 className="text-xl font-bold text-[var(--color-text)]">Belum ada mata kuliah</h2>
+              <p className="text-base max-w-[360px]">Tambahkan mata kuliah terlebih dahulu di halaman <strong>Manajemen RPS</strong>.</p>
               <a href="/admin/rps" className="btn btn-primary" style={{ marginTop: 'var(--space-4)' }}>
                 Buka Manajemen RPS
               </a>
@@ -150,25 +149,25 @@ export default function RpsPage() {
             </div>
           )}
 
-          <div className={styles.layout}>
+          <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 items-start">
             {/* ── Sidebar: daftar MK ─────────────────────── */}
-            <aside className={styles.mkList} aria-label="Daftar mata kuliah">
-              <div className={styles.mkListHeader}>
+            <aside className="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg shadow-sm overflow-hidden lg:sticky top-6" aria-label="Daftar mata kuliah">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-border)] font-bold text-sm uppercase tracking-[0.05em] text-[var(--color-text-muted)] bg-[#F9FAFB]">
                 <span>Mata Kuliah</span>
                 <span className="badge badge-info">{courses.length}</span>
               </div>
-              <ul className={styles.mkItems}>
+              <ul className="list-none py-2 max-h-[70vh] overflow-y-auto m-0 p-0">
                 {courses.map((mk) => (
                   <li key={mk.id}>
                     <button
-                      className={`${styles.mkItem} ${activeCourseId === mk.id ? styles.mkItemActive : ''}`}
+                      className={`flex items-center gap-3 w-full px-5 py-3 bg-transparent border-none cursor-pointer text-left font-[var(--font-base)] transition-colors border-l-[3px] border-transparent hover:bg-[var(--color-bg)] ${activeCourseId === mk.id ? '!bg-[var(--color-primary-light)] !border-l-[var(--color-primary)]' : ''}`}
                       onClick={() => setActiveCourseId(mk.id)}
                       aria-current={activeCourseId === mk.id ? 'true' : undefined}
                     >
-                      <span className={styles.mkCode}>{mk.code}</span>
-                      <div className={styles.mkMeta}>
-                        <span className={styles.mkName}>{mk.name}</span>
-                        <span className={styles.mkSub}>{mk.prodi} · Smt {mk.semester}</span>
+                      <span className={`shrink-0 text-xs font-bold text-white py-[3px] px-2 rounded-sm font-mono tracking-[0.04em] ${activeCourseId === mk.id ? 'bg-[var(--color-primary-dark)]' : 'bg-[var(--color-primary)]'}`}>{mk.code}</span>
+                      <div className="flex-1 min-w-0">
+                        <span className="block text-sm font-semibold text-[var(--color-text)] whitespace-nowrap overflow-hidden text-ellipsis">{mk.name}</span>
+                        <span className="block text-xs text-[var(--color-text-muted)] mt-[2px]">{mk.prodi} · Smt {mk.semester}</span>
                       </div>
                       {mk.rpsFiles && mk.rpsFiles.length > 0 && (
                         <div style={{display:'flex', alignItems:'center', gap:'4px'}}>
@@ -187,33 +186,33 @@ export default function RpsPage() {
 
             {/* ── Main panel ─────────────────────────────── */}
             {activeCourse && (
-              <div className={styles.panel}>
+              <div className="min-w-0">
                 {/* Info card */}
-                <div className={`card ${styles.infoCard}`}>
-                  <div className={styles.infoGrid}>
-                    <div className={styles.infoItem}>
-                      <span className={styles.infoLabel}>Kode MK</span>
-                      <span className={styles.infoValue}>{activeCourse.code}</span>
+                <div className="card px-6 py-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-6">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs font-bold uppercase tracking-[0.06em] text-[var(--color-text-muted)]">Kode MK</span>
+                      <span className="text-base font-bold text-[var(--color-text)]">{activeCourse.code}</span>
                     </div>
-                    <div className={styles.infoItem}>
-                      <span className={styles.infoLabel}>Nama Mata Kuliah</span>
-                      <span className={styles.infoValue}>{activeCourse.name}</span>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs font-bold uppercase tracking-[0.06em] text-[var(--color-text-muted)]">Nama Mata Kuliah</span>
+                      <span className="text-base font-bold text-[var(--color-text)]">{activeCourse.name}</span>
                     </div>
-                    <div className={styles.infoItem}>
-                      <span className={styles.infoLabel}>SKS</span>
-                      <span className={styles.infoValue}>{activeCourse.sks} SKS</span>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs font-bold uppercase tracking-[0.06em] text-[var(--color-text-muted)]">SKS</span>
+                      <span className="text-base font-bold text-[var(--color-text)]">{activeCourse.sks} SKS</span>
                     </div>
-                    <div className={styles.infoItem}>
-                      <span className={styles.infoLabel}>Semester</span>
-                      <span className={styles.infoValue}>Semester {activeCourse.semester}</span>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs font-bold uppercase tracking-[0.06em] text-[var(--color-text-muted)]">Semester</span>
+                      <span className="text-base font-bold text-[var(--color-text)]">Semester {activeCourse.semester}</span>
                     </div>
-                    <div className={styles.infoItem}>
-                      <span className={styles.infoLabel}>Dosen Pengampu</span>
-                      <span className={styles.infoValue}>{activeCourse.dosen || '—'}</span>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs font-bold uppercase tracking-[0.06em] text-[var(--color-text-muted)]">Dosen Pengampu</span>
+                      <span className="text-base font-bold text-[var(--color-text)]">{activeCourse.dosen || '—'}</span>
                     </div>
-                    <div className={styles.infoItem}>
-                      <span className={styles.infoLabel}>Program Studi</span>
-                      <span className={styles.infoValue}>{activeCourse.prodi || '—'}</span>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs font-bold uppercase tracking-[0.06em] text-[var(--color-text-muted)]">Program Studi</span>
+                      <span className="text-base font-bold text-[var(--color-text)]">{activeCourse.prodi || '—'}</span>
                     </div>
                   </div>
                 </div>
@@ -237,8 +236,8 @@ export default function RpsPage() {
                         const evalData = docEvaluations?.[fileId];
 
                         return (
-                          <div key={file.id} className={styles.filePreview}>
-                            <div className={styles.fileIcon} aria-hidden="true">
+                          <div key={file.id} className="flex items-center gap-5 px-6 py-5 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg flex-wrap max-sm:flex-col max-sm:items-start">
+                            <div className="shrink-0 text-[var(--color-primary)] bg-[var(--color-primary-light)] p-3 rounded-md" aria-hidden="true">
                               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                                 <polyline points="14 2 14 8 20 8"/>
@@ -247,21 +246,21 @@ export default function RpsPage() {
                                 <polyline points="10 9 9 8 9"/>
                               </svg>
                             </div>
-                            <div className={styles.fileInfo}>
+                            <div className="flex-1 min-w-0">
                               <div style={{display:'flex', alignItems:'center', gap:'8px'}}>
-                                <p className={styles.fileName} style={{marginBottom:0}}>{file.name}</p>
+                                <p className="text-base font-bold text-[var(--color-text)] break-all" style={{marginBottom:0}}>{file.name}</p>
                                 {evalData && (
                                   <span className={`badge badge-${evalData.status === 'warning' ? 'warning' : 'success'}`}>
                                     {evalData.status === 'warning' ? '⚠️ Perlu Revisi' : '✅ Lulus'}
                                   </span>
                                 )}
                               </div>
-                              <p className={styles.fileMeta}>
+                              <p className="text-sm text-[var(--color-text-muted)] mt-1">
                                 {formatBytes(file.size)} &nbsp;·&nbsp;
                                 Diunggah {formatDate(file.uploadedAt)}
                               </p>
                             </div>
-                            <div className={styles.fileActions}>
+                            <div className="flex gap-2 shrink-0">
                               {evalData?.status === 'warning' && (
                                 <button
                                   className="btn btn-sm btn-warning"
@@ -319,7 +318,7 @@ export default function RpsPage() {
                       </div>
                     ) : (
                       <div
-                      className={`${styles.dropzone} ${dragging ? styles.dropzoneDragging : ''}`}
+                      className={`group flex flex-col items-center justify-center gap-3 py-10 px-6 border-2 border-dashed border-[var(--color-border)] rounded-lg bg-[var(--color-bg)] cursor-pointer transition-colors text-center outline-none hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-light)] focus-visible:border-[var(--color-primary)] focus-visible:bg-[var(--color-primary-light)] ${dragging ? 'border-[var(--color-primary)] bg-[var(--color-primary-light)] scale-[1.01]' : ''}`}
                       onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
                       onDragLeave={() => setDragging(false)}
                       onDrop={onDrop}
@@ -329,25 +328,25 @@ export default function RpsPage() {
                       onClick={() => fileInputRef.current?.click()}
                       onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
                     >
-                      <div className={styles.dropzoneIcon} aria-hidden="true">
+                      <div className={`mb-2 transition-colors ${dragging ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-muted)] group-hover:text-[var(--color-primary)]'}`} aria-hidden="true">
                         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                           <polyline points="17 8 12 3 7 8"/>
                           <line x1="12" y1="3" x2="12" y2="15"/>
                         </svg>
                       </div>
-                      <p className={styles.dropzoneTitle}>
+                      <p className="text-lg font-bold text-[var(--color-text)]">
                         {dragging ? 'Lepaskan file di sini…' : 'Seret & lepas file RPS ke sini'}
                       </p>
-                      <p className={styles.dropzoneHint}>
+                      <p className="text-base text-[var(--color-text-muted)]">
                         atau klik untuk memilih file
                       </p>
-                      <p className={styles.dropzoneFormats}>
+                      <p className="text-sm text-[var(--color-text-light)] mt-1">
                         Format wajib: PDF &nbsp;·&nbsp; Maks. 20 MB
                       </p>
                       <button
                         type="button"
-                        className={`btn btn-primary ${styles.dropzoneBtn}`}
+                        className={`btn btn-primary mt-3 pointer-events-none`}
                         tabIndex={-1}
                         aria-hidden="true"
                       >
