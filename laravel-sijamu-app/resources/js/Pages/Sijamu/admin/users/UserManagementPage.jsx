@@ -7,6 +7,7 @@ import Breadcrumb from '@/components/Breadcrumb';
 import ConfirmModal from '@/components/ConfirmModal';
 import { ToastContainer, addToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
+import { router } from '@inertiajs/react';
 
 /* ─── Role Mapping ─── */
 const ROLE_MAP = {
@@ -44,33 +45,34 @@ const DEFAULT_PERMISSIONS = {
   'taskforce':    ['upload_document', 'view_document', 'view_rps', 'manage_rps'],
 };
 
-const MOCK_USERS = [
-  { id: 1, nama: 'Dr. Ahmad Fauzi, M.Kom',   nip: '197001012000031001', email: 'ahmad@unipgri.ac.id',   role: 'admin',     status: 'aktif',    prodi: '',                           lastLogin: '2026-08-05 08:12' },
-  { id: 2, nama: 'Prof. Dr. Siti Rahayu',    nip: '196805152001122001', email: 'siti@unipgri.ac.id',    role: 'dekan',     status: 'aktif',    prodi: '',                           lastLogin: '2026-08-04 14:30' },
-  { id: 3, nama: 'Dr. Budi Santoso, M.T',    nip: '198003102005011002', email: 'budi@unipgri.ac.id',    role: 'koprodi',   status: 'aktif',    prodi: 'Teknik Informatika',         lastLogin: '2026-08-03 09:45' },
-  { id: 4, nama: 'Rina Wulandari, S.Kom',    nip: '199201052019032001', email: 'rina@unipgri.ac.id',    role: 'taskforce', status: 'aktif',    prodi: 'Teknik Informatika',         lastLogin: '2026-08-05 07:55' },
-  { id: 5, nama: 'Dr. Wati Nurhayati, M.M',  nip: '197712282004012002', email: 'wati@unipgri.ac.id',    role: 'auditor',   status: 'aktif',    prodi: 'Pendidikan Matematika',      lastLogin: '2026-08-05 08:01' },
-];
-
 const EMPTY_FORM = { nama: '', nip: '', email: '', role: 'taskforce', prodi: '', status: 'aktif', password: '' };
 const PRODI_LIST = ['Teknik Informatika', 'Pendidikan Matematika', 'Manajemen', 'Pendidikan Bahasa Inggris', 'Akuntansi', 'Pendidikan IPA', 'Hukum', 'Fakultas Ekonomi', ''];
 
-export default function UserManagementPage() {
+export default function UserManagementPage({ serverUsers, serverPermissions }) {
   const { user } = useAuth();
-  const [users, setUsers] = useState([]);
-  const [dataLoading, setDataLoading] = useState(true);
-  const [permissions, setPermissions] = useState(DEFAULT_PERMISSIONS);
+  const [users, setUsers] = useState(serverUsers || []);
+  
+  // Merge server permissions with default permissions
+  const initialPermissions = useMemo(() => {
+    const merged = { ...DEFAULT_PERMISSIONS };
+    if (serverPermissions) {
+      Object.keys(serverPermissions).forEach(role => {
+        merged[role] = serverPermissions[role];
+      });
+    }
+    return merged;
+  }, [serverPermissions]);
+
+  const [permissions, setPermissions] = useState(initialPermissions);
   const [activeTab, setActiveTab] = useState('users');
 
   useEffect(() => {
-    const load = async () => {
-      setDataLoading(true);
-      await new Promise(r => setTimeout(r, 600));
-      setUsers(MOCK_USERS);
-      setDataLoading(false);
-    };
-    load();
-  }, []);
+    setUsers(serverUsers || []);
+  }, [serverUsers]);
+
+  useEffect(() => {
+    setPermissions(initialPermissions);
+  }, [initialPermissions]);
 
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState('');
@@ -121,31 +123,40 @@ export default function UserManagementPage() {
   const handleSave = () => {
     const errs = validate();
     if (Object.keys(errs).length) { setFormErrors(errs); return; }
+
     if (editId) {
-      setUsers(prev => prev.map(u => u.id === editId ? { ...u, ...form } : u));
-      addToast(`Data pengguna "${form.nama}" berhasil diperbarui.`, 'success');
+      router.put(`/admin/users/${editId}`, form, {
+        onSuccess: () => {
+          addToast(`Data pengguna "${form.nama}" berhasil diperbarui.`, 'success');
+          setModalOpen(false);
+        },
+        onError: (errors) => setFormErrors(errors)
+      });
     } else {
-      const newId = Math.max(...users.map(u => u.id)) + 1;
-      setUsers(prev => [...prev, { id: newId, ...form, lastLogin: '-' }]);
-      addToast(`Pengguna "${form.nama}" berhasil ditambahkan.`, 'success');
+      router.post('/admin/users', form, {
+        onSuccess: () => {
+          addToast(`Pengguna "${form.nama}" berhasil ditambahkan.`, 'success');
+          setModalOpen(false);
+        },
+        onError: (errors) => setFormErrors(errors)
+      });
     }
-    setModalOpen(false);
   };
 
   const handleDelete = () => {
-    const name = users.find(u => u.id === deleteTarget)?.nama;
-    setUsers(prev => prev.filter(u => u.id !== deleteTarget));
-    setDeleteTarget(null);
-    addToast(`Pengguna "${name}" berhasil dihapus.`, 'info');
+    router.delete(`/admin/users/${deleteTarget}`, {
+      onSuccess: () => {
+        addToast(`Pengguna berhasil dihapus.`, 'info');
+        setDeleteTarget(null);
+      }
+    });
   };
 
-  const toggleStatus = (id) => {
-    setUsers(prev => prev.map(u => {
-      if (u.id !== id) return u;
-      const newStatus = u.status === 'aktif' ? 'nonaktif' : 'aktif';
-      addToast(`Status ${u.nama} diubah ke "${newStatus}".`, 'info');
-      return { ...u, status: newStatus };
-    }));
+  const toggleStatus = (u) => {
+    const newStatus = u.status === 'aktif' ? 'nonaktif' : 'aktif';
+    router.put(`/admin/users/${u.id}`, { ...u, status: newStatus }, {
+      onSuccess: () => addToast(`Status ${u.nama} diubah ke "${newStatus}".`, 'info')
+    });
   };
 
   const togglePermission = (role, permKey) => {
@@ -164,8 +175,19 @@ export default function UserManagementPage() {
     setPermissions(prev => ({ ...prev, [role]: updated }));
   };
 
-  const savePermissions = () => { addToast('Pengaturan izin berhasil disimpan.', 'success'); };
-  const resetPermissions = (role) => { setPermissions(prev => ({ ...prev, [role]: DEFAULT_PERMISSIONS[role] })); addToast(`Izin untuk peran "${role}" direset ke default.`, 'info'); };
+  const savePermissions = () => { 
+    router.post('/admin/permissions', {
+      role: selectedRole,
+      permissions: permissions[selectedRole] || []
+    }, {
+      onSuccess: () => addToast('Pengaturan izin berhasil disimpan.', 'success')
+    });
+  };
+  
+  const resetPermissions = (role) => { 
+    setPermissions(prev => ({ ...prev, [role]: DEFAULT_PERMISSIONS[role] })); 
+    addToast(`Izin untuk peran "${role}" direset ke default. Jangan lupa klik Simpan.`, 'info'); 
+  };
 
   const permGroups = [...new Set(PERMISSIONS.map(p => p.group))];
   const [selectedRole, setSelectedRole] = useState(ROLES[0]);
@@ -305,7 +327,7 @@ export default function UserManagementPage() {
                 <table className="data-table">
                   <thead><tr><th scope="col">#</th><th scope="col">Pengguna</th><th scope="col">NIP / NIDN</th><th scope="col">Peran</th><th scope="col">Program Studi</th><th scope="col">Status</th><th scope="col">Login Terakhir</th><th scope="col" style={{textAlign:'center'}}>Aksi</th></tr></thead>
                   <tbody>
-                    {dataLoading ? <tr><td colSpan="8" style={{textAlign: 'center', padding: '24px', color: '#6B7280'}}>Memuat data pengguna...</td></tr> : filtered.length === 0 ? <tr><td colSpan="8"><div className="flex flex-col items-center justify-center p-10 gap-3 text-gray-500 text-base font-medium"><div className="text-5xl">🔍</div><div>Tidak ada pengguna yang sesuai filter</div></div></td></tr> : filtered.map((u, i) => (
+                    {filtered.length === 0 ? <tr><td colSpan="8"><div className="flex flex-col items-center justify-center p-10 gap-3 text-gray-500 text-base font-medium"><div className="text-5xl">🔍</div><div>Tidak ada pengguna yang sesuai filter</div></div></td></tr> : filtered.map((u, i) => (
                       <tr key={u.id} className={u.status === 'nonaktif' ? 'opacity-60' : ''}>
                         <td>{i + 1}</td>
                         <td>
@@ -321,7 +343,7 @@ export default function UserManagementPage() {
                         <td><span className={`inline-flex items-center py-1 px-2.5 rounded-full text-xs font-bold whitespace-nowrap ${roleBadgeClass(u.role)}`}>{ROLE_MAP[u.role]}</span></td>
                         <td className="text-sm text-gray-500 max-w-[180px]">{u.prodi || '-'}</td>
                         <td>
-                          <button className={`inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full text-sm font-semibold cursor-pointer border-2 transition-all ${u.status === 'aktif' ? 'bg-green-100 text-green-700 border-green-700/20 hover:bg-[#B7F0DA]' : 'bg-red-100 text-red-700 border-red-700/20 hover:bg-[#FCCACA]'}`} onClick={() => toggleStatus(u.id)} aria-label={`Status ${u.nama}: ${u.status}. Klik untuk mengubah`} title="Klik untuk mengubah status">
+                          <button className={`inline-flex items-center gap-1.5 py-1.5 px-3 rounded-full text-sm font-semibold cursor-pointer border-2 transition-all ${u.status === 'aktif' ? 'bg-green-100 text-green-700 border-green-700/20 hover:bg-[#B7F0DA]' : 'bg-red-100 text-red-700 border-red-700/20 hover:bg-[#FCCACA]'}`} onClick={() => toggleStatus(u)} aria-label={`Status ${u.nama}: ${u.status}. Klik untuk mengubah`} title="Klik untuk mengubah status">
                             <span className={`w-2 h-2 rounded-full shrink-0 ${u.status === 'aktif' ? 'bg-green-600' : 'bg-red-600'}`} />
                             {u.status === 'aktif' ? 'Aktif' : 'Non-aktif'}
                           </button>

@@ -22,9 +22,10 @@ createInertiaApp({
     ),
     setup({ el, App, props }) {
         const root = createRoot(el);
+        const initialUser = props.initialPage.props.auth?.user || null;
 
         root.render(
-            <AuthProvider>
+            <AuthProvider initialUser={initialUser}>
                 <PeriodProvider>
                     <RpsProvider>
                         <UploadConfigProvider>
