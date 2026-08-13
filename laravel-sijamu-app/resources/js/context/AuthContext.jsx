@@ -41,8 +41,17 @@ export function AuthProvider({ children, initialUser }) {
   /* ── Helpers ─────────────────────────────────────────────────── */
   const isRole = useCallback((...roles) => user && roles.includes(user.role), [user]);
 
+  const hasPermission = useCallback((permission) => {
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+    if (user.permissions && Array.isArray(user.permissions)) {
+      return user.permissions.includes(permission);
+    }
+    return false;
+  }, [user]);
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, isRole }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, isRole, hasPermission }}>
       {children}
     </AuthContext.Provider>
   );

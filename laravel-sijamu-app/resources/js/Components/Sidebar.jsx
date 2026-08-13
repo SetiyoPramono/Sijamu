@@ -17,7 +17,7 @@ const navGroups = [
       {
         href: '/dashboard',
         label: 'Beranda',
-        allowedRoles: ['admin', 'dekan', 'koprodi'],
+        requiredPermission: 'view_dashboard',
         icon: (
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
@@ -28,7 +28,7 @@ const navGroups = [
       {
         href: '/rps',
         label: 'RPS (Mata Kuliah)',
-        allowedRoles: ['admin', 'dekan', 'koprodi', 'taskforce'],
+        requiredPermission: 'view_rps',
         icon: (
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
@@ -39,7 +39,7 @@ const navGroups = [
       {
         href: '/auditor',
         label: 'Ruang Evaluasi',
-        allowedRoles: ['auditor', 'admin'],
+        requiredPermission: 'start_evaluation',
         icon: (
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -53,7 +53,7 @@ const navGroups = [
       {
         href: '/upload',
         label: 'Unggah Dokumen',
-        allowedRoles: ['admin', 'koprodi', 'taskforce'],
+        requiredPermission: 'upload_document',
         icon: (
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -65,7 +65,7 @@ const navGroups = [
       {
         href: '/reports',
         label: 'Laporan',
-        allowedRoles: ['admin', 'dekan', 'koprodi'],
+        requiredPermission: 'view_report',
         icon: (
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="20" x2="18" y2="10"/>
@@ -78,12 +78,12 @@ const navGroups = [
   },
   {
     label: 'Administrasi',
-    allowedRoles: ['admin'], // grup ini hanya tampil untuk admin
+    requiredPermission: 'manage_users', // grup ini tampil jika punya minimal manage_users
     items: [
       {
         href: '/admin/rps',
         label: 'Manajemen RPS',
-        allowedRoles: ['admin'],
+        requiredPermission: 'manage_rps',
         icon: (
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -97,7 +97,7 @@ const navGroups = [
       {
         href: '/admin/users',
         label: 'Pengguna',
-        allowedRoles: ['admin'],
+        requiredPermission: 'manage_users',
         icon: (
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -110,7 +110,7 @@ const navGroups = [
       {
         href: '/admin/upload',
         label: 'Manajemen Upload',
-        allowedRoles: ['admin'],
+        requiredPermission: 'manage_upload',
         icon: (
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -125,7 +125,7 @@ const navGroups = [
       {
         href: '/admin/settings',
         label: 'Pengaturan',
-        allowedRoles: ['admin'],
+        requiredPermission: 'system_settings',
         icon: (
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="3"/>
@@ -149,7 +149,7 @@ const ROLE_LABELS = {
 
 export default function Sidebar() {
   const { url: pathname } = usePage();
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
   const { periods, activePeriodId, setActivePeriodId } = usePeriod();
   const userRole    = user?.role;
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -159,14 +159,13 @@ export default function Sidebar() {
     setIsMobileOpen(false);
   }, [pathname]);
 
-  // Filter grup dan item berdasarkan role
-  // Jika userRole null/undefined (belum login), sembunyikan item yang punya allowedRoles
+  // Filter grup dan item berdasarkan izin (permissions)
   const visibleGroups = navGroups
-    .filter(g => !g.allowedRoles || (userRole && g.allowedRoles.includes(userRole)))
+    .filter(g => !g.requiredPermission || (user && hasPermission(g.requiredPermission)))
     .map(g => ({
       ...g,
       items: g.items.filter(
-        item => !item.allowedRoles || (userRole && item.allowedRoles.includes(userRole))
+        item => !item.requiredPermission || (user && hasPermission(item.requiredPermission))
       ),
     }))
     .filter(g => g.items.length > 0);

@@ -23,16 +23,37 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * Define the props that are shared by default.
-     *
      * @return array<string, mixed>
      */
     public function share(Request $request): array
     {
+        $userData = null;
+        if ($request->user()) {
+            $user = $request->user();
+            $userData = $user->toArray();
+            
+            if ($user->role === 'admin') {
+                $userData['permissions'] = ['*'];
+            } else {
+                $rolePerm = \App\Models\RolePermission::where('role', $user->role)->first();
+                if ($rolePerm) {
+                    $userData['permissions'] = $rolePerm->permissions ?? [];
+                } else {
+                    $defaults = [
+                        'auditor' => ['view_dashboard', 'view_report', 'start_evaluation', 'submit_evaluation', 'edit_evaluation', 'view_document', 'view_rps'],
+                        'dekan' => ['view_dashboard', 'view_report', 'export_report', 'view_document', 'view_rps'],
+                        'koprodi' => ['view_dashboard', 'view_report', 'upload_document', 'delete_document', 'view_document', 'view_rps', 'manage_rps'],
+                        'taskforce' => ['upload_document', 'view_document', 'view_rps', 'manage_rps'],
+                    ];
+                    $userData['permissions'] = $defaults[$user->role] ?? [];
+                }
+            }
+        }
+
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $userData,
             ],
         ];
     }
