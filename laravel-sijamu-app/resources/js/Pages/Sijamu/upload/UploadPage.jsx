@@ -414,13 +414,13 @@ export default function UploadPage() {
                             <div className="flex gap-2 items-center">
                               {ind.status === 'done' ? (
                                 <>
-                                  {docEvaluations?.[`mutu-${ind.globalDocId}`]?.status === 'warning' && (
+                                  {docEvaluations?.[`mutu-${ind.globalDocId}`] && (
                                     <button
-                                      className="btn btn-sm btn-warning"
+                                      className={`btn btn-sm ${docEvaluations[`mutu-${ind.globalDocId}`].status === 'warning' ? 'btn-warning' : 'btn-outline'}`}
                                       onClick={() => setActiveFeedback(docEvaluations[`mutu-${ind.globalDocId}`])}
                                       aria-label="Lihat Catatan Auditor"
                                     >
-                                      Lihat Catatan
+                                      Lihat Feedback
                                     </button>
                                   )}
                                   <button
@@ -483,39 +483,67 @@ export default function UploadPage() {
       
       {/* Feedback Modal */}
       {activeFeedback && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999,
-          display: 'flex', alignItems: 'center', justifyContent: 'center'
-        }}>
-          <div className="card" style={{ maxWidth: '500px', width: '90%', padding: '2rem' }}>
-            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1rem'}}>
-              <h2 style={{margin:0, fontSize:'1.25rem', color:'var(--color-danger)'}}>⚠️ Catatan Revisi Auditor</h2>
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 animate-[fadeIn_0.2s_ease]"
+          onClick={(e) => { if (e.target === e.currentTarget) setActiveFeedback(null); }}
+        >
+          <div className="bg-white rounded-xl shadow-xl max-w-[540px] w-full p-6 sm:p-8 animate-[scaleIn_0.2s_ease]">
+            <div className="flex justify-between items-start mb-5">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${activeFeedback.status === 'warning' ? 'bg-[var(--color-warning-light)] text-[var(--color-warning)]' : 'bg-[var(--color-success-light)] text-[var(--color-success)]'}`}>
+                  {activeFeedback.status === 'warning' ? '⚠️' : '✅'}
+                </div>
+                <div>
+                  <h2 className="text-xl font-extrabold text-[var(--color-text)] leading-tight m-0">
+                    Feedback Auditor
+                  </h2>
+                  <p className="text-sm font-semibold text-[var(--color-text-muted)] mt-1 mb-0">
+                    {activeFeedback.status === 'warning' ? 'Status: Perlu Revisi' : 'Status: Lulus (Memenuhi Standar)'}
+                  </p>
+                </div>
+              </div>
               <button 
                 onClick={() => setActiveFeedback(null)} 
-                className="btn btn-sm btn-ghost"
+                className="w-8 h-8 rounded-md flex items-center justify-center text-[var(--color-text-light)] hover:bg-[var(--color-bg)] hover:text-[var(--color-text)] transition-colors"
                 aria-label="Tutup"
               >
-                ✕
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
-            <div style={{marginBottom: '1rem'}}>
-              <p style={{fontSize:'0.875rem', color:'var(--color-text-muted)', marginBottom:'4px'}}>Dinilai oleh: {activeFeedback.auditor}</p>
-              <p style={{fontSize:'0.875rem', color:'var(--color-text-muted)'}}>Skor: {activeFeedback.score} / {activeFeedback.maxScore}</p>
+            
+            <div className="flex items-center gap-6 mb-6 pb-5 border-b border-[var(--color-border)]">
+              <div>
+                <p className="text-xs font-bold text-[var(--color-text-light)] uppercase tracking-wider mb-1">Dinilai oleh</p>
+                <p className="text-sm font-semibold text-[var(--color-text)] m-0">{activeFeedback.auditor}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-[var(--color-text-light)] uppercase tracking-wider mb-1">Total Skor</p>
+                <p className="text-sm font-extrabold text-[var(--color-primary)] m-0">{activeFeedback.score} <span className="text-[var(--color-text-muted)] font-medium">/ {activeFeedback.maxScore}</span></p>
+              </div>
             </div>
             
-            <div style={{marginBottom: '1rem', background:'var(--color-background-alt)', padding:'1rem', borderRadius:'8px'}}>
-              <h3 style={{fontSize:'0.875rem', fontWeight:600, marginBottom:'8px'}}>Temuan:</h3>
-              <p style={{fontSize:'0.875rem', whiteSpace:'pre-wrap'}}>{activeFeedback.temuan || 'Tidak ada temuan spesifik.'}</p>
+            <div className="bg-[var(--color-bg)] rounded-lg p-5 mb-4 border border-[var(--color-border)]">
+              <h3 className="text-sm font-bold text-[var(--color-text)] flex items-center gap-2 mb-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                Temuan Standar:
+              </h3>
+              <p className="text-sm text-[var(--color-text-muted)] leading-relaxed m-0 whitespace-pre-wrap">
+                {activeFeedback.temuan || 'Tidak ada temuan spesifik yang dicatat oleh auditor.'}
+              </p>
             </div>
             
-            <div style={{marginBottom: '1.5rem', background:'var(--color-background-alt)', padding:'1rem', borderRadius:'8px'}}>
-              <h3 style={{fontSize:'0.875rem', fontWeight:600, marginBottom:'8px'}}>Catatan Perbaikan:</h3>
-              <p style={{fontSize:'0.875rem', whiteSpace:'pre-wrap'}}>{activeFeedback.catatan || 'Tidak ada catatan.'}</p>
+            <div className="bg-[#FAFBFE] rounded-lg p-5 mb-6 border border-[#E5E7EB]">
+              <h3 className="text-sm font-bold text-[var(--color-text)] flex items-center gap-2 mb-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                Catatan & Rekomendasi:
+              </h3>
+              <p className="text-sm text-[var(--color-text-muted)] leading-relaxed m-0 whitespace-pre-wrap">
+                {activeFeedback.catatan || 'Tidak ada catatan perbaikan tambahan.'}
+              </p>
             </div>
             
-            <div style={{textAlign:'right'}}>
-              <button className="btn btn-primary" onClick={() => setActiveFeedback(null)}>Mengerti</button>
+            <div className="flex justify-end mt-2">
+              <button className="btn btn-primary px-8" onClick={() => setActiveFeedback(null)}>Mengerti</button>
             </div>
           </div>
         </div>

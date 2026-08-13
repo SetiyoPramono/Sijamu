@@ -10,16 +10,16 @@ import { useEvaluation } from '@/context/EvaluationContext';
 
 /* ── RingCard — SVG circular progress ring ──────────────────────────────── */
 function RingCard({ value, total, label, color, trackColor }) {
-  const SIZE       = 120;
-  const STROKE     = 10;
+  const SIZE       = 100;
+  const STROKE     = 8;
   const R          = (SIZE - STROKE) / 2;
   const CIRC       = 2 * Math.PI * R;
   const pct        = total > 0 ? value / total : 0;
   const dashOffset = CIRC * (1 - pct);
 
   return (
-    <div className="flex flex-col items-center gap-2 py-4 px-3 bg-[var(--color-bg)] rounded-lg border border-[var(--color-border)] transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md">
-      <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} aria-label={`${label}: ${value} dari ${total} prodi`} role="img">
+    <div className="flex flex-col items-center gap-2 py-3 px-1 sm:px-2 bg-[var(--color-bg)] rounded-lg border border-[var(--color-border)] transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md min-w-0">
+      <svg width="100%" height="auto" viewBox={`0 0 ${SIZE} ${SIZE}`} style={{ maxWidth: '80px' }} aria-label={`${label}: ${value} dari ${total} prodi`} role="img">
         <circle cx={SIZE/2} cy={SIZE/2} r={R} fill="none" stroke={trackColor} strokeWidth={STROKE} />
         <circle
           cx={SIZE/2} cy={SIZE/2} r={R}
@@ -29,11 +29,11 @@ function RingCard({ value, total, label, color, trackColor }) {
           transform={`rotate(-90 ${SIZE/2} ${SIZE/2})`}
           style={{ transition: 'stroke-dashoffset 1s ease' }}
         />
-        <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle" fontSize="26" fontWeight="800" fontFamily="Inter, sans-serif" fill={color}>{value}</text>
-        <text x="50%" y="66%" textAnchor="middle" dominantBaseline="middle" fontSize="10" fontWeight="600" fontFamily="Inter, sans-serif" fill="#6B7280">prodi</text>
+        <text x="50%" y="46%" textAnchor="middle" dominantBaseline="middle" fontSize="22" fontWeight="800" fontFamily="Inter, sans-serif" fill={color}>{value}</text>
+        <text x="50%" y="68%" textAnchor="middle" dominantBaseline="middle" fontSize="10" fontWeight="600" fontFamily="Inter, sans-serif" fill="#6B7280">prodi</text>
       </svg>
-      <div className="text-sm font-bold text-center leading-[1.3]" style={{ color }}>{label}</div>
-      <div className="text-xs text-[var(--color-text-muted)] font-semibold bg-[var(--color-surface)] py-[2px] px-[10px] rounded-full border border-[var(--color-border)]">{Math.round(pct * 100)}%</div>
+      <div className="text-[10px] sm:text-xs font-bold text-center leading-[1.3] w-full px-1" style={{ color }} title={label}>{label}</div>
+      <div className="text-[9px] sm:text-[10px] text-[var(--color-text-muted)] font-semibold bg-[var(--color-surface)] py-[2px] px-[8px] rounded-full border border-[var(--color-border)]">{Math.round(pct * 100)}%</div>
     </div>
   );
 }
@@ -98,13 +98,13 @@ export default function DashboardPage() {
             { label: 'Executive Dashboard', href: '/dashboard' },
           ]} />
 
-          <div className="page-header flex items-center justify-between">
+          <div className="page-header flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div>
               <h1 className="page-title">{greeting}</h1>
               <p className="page-subtitle">Rekap status mutu seluruh program studi — Periode {period}</p>
             </div>
             <button
-              className="btn btn-primary"
+              className="btn btn-primary w-full md:w-auto justify-center"
               onClick={() => addToast('Laporan PDF sedang digenerate...', 'info')}
               aria-label="Unduh laporan PDF"
             >
@@ -129,7 +129,7 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-[380px_1fr] gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] xl:grid-cols-[360px_1fr] gap-6">
             {/* ── Status Kelengkapan Mutu — SVG Ring Card ── */}
             <div className={`card flex flex-col gap-0`}>
               <h2 className="card-title">Status Kelengkapan Mutu</h2>

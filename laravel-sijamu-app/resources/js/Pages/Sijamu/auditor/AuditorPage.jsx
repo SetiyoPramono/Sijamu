@@ -1,8 +1,9 @@
-// Halaman Ruang Evaluasi (Auditor Split-Screen) — route: /auditor
-// CSS ada di: AuditorPage.module.css
+// Halaman Ruang Evaluasi (Auditor) v3 — "Clean Workspace" Design
+// route: /auditor
 'use client';
 
-import { useState, useMemo } from 'react';
+import './AuditorPage.css';
+import { useState, useMemo, useCallback } from 'react';
 import { Link } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Breadcrumb from '@/components/Breadcrumb';
@@ -14,210 +15,209 @@ import { usePeriod } from '@/context/PeriodContext';
 import { useMutu } from '@/context/MutuContext';
 import { useEvaluation } from '@/context/EvaluationContext';
 
+/* ── DATA ──────────────────────────────────────────────────────── */
 const indicators = [
-  {
-    id: 1,
-    kode: 'C1.1',
-    nama: 'Visi, Misi, Tujuan, dan Strategi',
-    rubrik: 'Dokumen ini harus memuat: (1) Visi yang jelas dan terukur, (2) Misi yang operasional, (3) Tujuan yang SMART, (4) Strategi pencapaian yang realistis.',
-    help: 'VMTS harus mencerminkan keunggulan prodi dan dapat diukur pencapaiannya. Pastikan ada bukti sosialisasi kepada civitas akademika.',
-  },
-  {
-    id: 2,
-    kode: 'C1.2',
-    nama: 'Tata Pamong dan Tata Kelola',
-    rubrik: 'Penilaian mencakup: (1) Struktur organisasi yang jelas, (2) Tupoksi terdokumentasi, (3) Mekanisme pengambilan keputusan, (4) Sistem penjaminan mutu internal.',
-    help: 'Tata pamong yang baik ditandai dengan adanya SOP yang tersosialisasi dan dilaksanakan secara konsisten. Periksa notulen rapat dan SK pengangkatan.',
-  },
-  {
-    id: 3,
-    kode: 'C2.1',
-    nama: 'Profil Dosen',
-    rubrik: 'Penilaian meliputi: (1) Kualifikasi pendidikan (min. S2), (2) Jabatan akademik, (3) Rasio dosen:mahasiswa (1:30), (4) Kesesuaian keahlian dengan bidang ajar.',
-    help: 'Periksa SK Dosen Tetap dan CV masing-masing dosen. Rasio dosen:mahasiswa dihitung dari PDDIKTI semester terakhir.',
-  },
-  {
-    id: 4,
-    kode: 'C3.1',
-    nama: 'Kurikulum',
-    rubrik: 'Penilaian mencakup: (1) Kesesuaian dengan KKNI/OBE, (2) Proses perancangan kurikulum (stakeholder involvement), (3) Pemutakhiran berkala (maks. 4 tahun sekali).',
-    help: 'Kurikulum harus mengacu pada Permendikbud No. 3 Tahun 2020. Periksa dokumen peninjauan kurikulum dan berita acara rapat.',
-  },
-  {
-    id: 5,
-    kode: 'C4.1',
-    nama: 'Penelitian Dosen',
-    rubrik: 'Penilaian mencakup: (1) Jumlah penelitian per tahun (min. 1/dosen/tahun), (2) Sumber pendanaan, (3) Relevansi topik, (4) Luaran (publikasi/HKI).',
-    help: 'Data penelitian dapat diverifikasi melalui SINTA, Google Scholar, dan sistem pelaporan internal. Luaran yang diperhitungkan minimal di jurnal nasional terakreditasi.',
-  },
+  { id: 1, kode: 'C1.1', icon: '🎯', nama: 'Visi, Misi, Tujuan, dan Strategi',
+    rubrik: 'Dokumen harus memuat: (1) Visi yang jelas dan terukur, (2) Misi yang operasional, (3) Tujuan SMART, (4) Strategi pencapaian yang realistis.',
+    help: 'VMTS harus mencerminkan keunggulan prodi. Pastikan ada bukti sosialisasi kepada civitas akademika.' },
+  { id: 2, kode: 'C1.2', icon: '🏛️', nama: 'Tata Pamong dan Tata Kelola',
+    rubrik: 'Penilaian mencakup: (1) Struktur organisasi, (2) Tupoksi terdokumentasi, (3) Mekanisme pengambilan keputusan, (4) Sistem penjaminan mutu internal.',
+    help: 'Tata pamong yang baik ditandai dengan SOP yang tersosialisasi dan dilaksanakan secara konsisten.' },
+  { id: 3, kode: 'C2.1', icon: '👨‍🏫', nama: 'Profil Dosen',
+    rubrik: 'Penilaian meliputi: (1) Kualifikasi pendidikan (min. S2), (2) Jabatan akademik, (3) Rasio dosen:mahasiswa, (4) Kesesuaian keahlian dengan bidang ajar.',
+    help: 'Periksa SK Dosen Tetap dan CV. Rasio dihitung dari PDDIKTI semester terakhir.' },
+  { id: 4, kode: 'C3.1', icon: '📚', nama: 'Kurikulum',
+    rubrik: 'Penilaian mencakup: (1) Kesesuaian dengan KKNI/OBE, (2) Proses perancangan kurikulum, (3) Pemutakhiran berkala (maks. 4 tahun).',
+    help: 'Kurikulum harus mengacu pada Permendikbud No. 3 Tahun 2020.' },
+  { id: 5, kode: 'C4.1', icon: '🔬', nama: 'Penelitian Dosen',
+    rubrik: 'Penilaian mencakup: (1) Jumlah penelitian per tahun, (2) Sumber pendanaan, (3) Relevansi topik, (4) Luaran (publikasi/HKI).',
+    help: 'Data penelitian diverifikasi via SINTA, Google Scholar, dan laporan internal.' },
 ];
 
 const temuanOptions = [
   'Tidak ada temuan — dokumen sesuai standar',
   'Dokumen tidak lengkap — ada lampiran yang kurang',
   'Dokumen tidak sesuai — konten tidak relevan dengan indikator',
-  'Dokumen kadaluarsa — belum diperbarui dalam 2 tahun terakhir',
+  'Dokumen kadaluarsa — belum diperbarui dalam 2 tahun',
   'Dokumen ada namun belum disahkan pimpinan',
   'Data tidak konsisten antar dokumen',
   'Tidak ada dokumen pendukung sama sekali',
 ];
 
 const nilaiOptions = [
-  { val: 4, label: 'Sangat Baik', sub: '> 85%', color: 'green' },
-  { val: 3, label: 'Baik', sub: '70% – 85%', color: 'blue' },
-  { val: 2, label: 'Cukup', sub: '55% – 70%', color: 'yellow' },
-  { val: 1, label: 'Kurang', sub: '< 55%', color: 'red' },
+  { val: 4, label: 'Sangat Baik', sub: '> 85%',  bg: '#ECFDF5', border: '#10B981', text: '#065F46', ring: 'rgba(16,185,129,0.15)' },
+  { val: 3, label: 'Baik',        sub: '70–85%',  bg: '#EFF6FF', border: '#3B82F6', text: '#1E40AF', ring: 'rgba(59,130,246,0.15)' },
+  { val: 2, label: 'Cukup',       sub: '55–70%',  bg: '#FFFBEB', border: '#F59E0B', text: '#92400E', ring: 'rgba(245,158,11,0.15)' },
+  { val: 1, label: 'Kurang',      sub: '< 55%',   bg: '#FEF2F2', border: '#EF4444', text: '#991B1B', ring: 'rgba(239,68,68,0.15)' },
 ];
 
-export default function AuditorPage() {
-  const [currentIdx, setCurrentIdx] = useState(0);
-  const [zoomLevel, setZoomLevel] = useState(100);
-  const [values, setValues] = useState(
-    indicators.reduce((acc, ind) => ({
-      ...acc,
-      [ind.id]: { temuan: '', nilai: '', catatan: '' },
-    }), {})
+/* ── HELPERS ────────────────────────────────────────────────────── */
+const scoreColor = p => p > 80 ? '#10B981' : p > 50 ? '#F59E0B' : '#EF4444';
+const scoreLabel = p => p > 80 ? 'Lulus' : p > 50 ? 'Perlu Perhatian' : 'Kritis';
+
+/* ── SVG ICONS ──────────────────────────────────────────────────── */
+const SearchIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
+const XIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+const CheckSvg = ({ size = 11, stroke = 3.5, color = 'currentColor' }) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>;
+const DocSvg = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>;
+const MutuSvg = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>;
+const ZoomIn = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>;
+const ZoomOut = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>;
+
+/* ── PROGRESS RING ──────────────────────────────────────────────── */
+function ProgressRing({ pct, size = 48, stroke = 5 }) {
+  const r = (size - stroke * 2) / 2;
+  const circ = 2 * Math.PI * r;
+  const offset = circ - (pct / 100) * circ;
+  const c = pct === 100 ? '#10B981' : pct >= 60 ? '#1A56DB' : '#F59E0B';
+  return (
+    <svg width={size} height={size} style={{ transform: 'rotate(-90deg)', flexShrink: 0 }} role="img" aria-label={`Progress ${pct}%`}>
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#E5E7EB" strokeWidth={stroke} />
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={c} strokeWidth={stroke}
+        strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round"
+        style={{ transition: 'stroke-dashoffset 0.5s ease, stroke 0.3s ease' }} />
+    </svg>
   );
-  const [showReview, setShowReview] = useState(false);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MAIN COMPONENT
+   ═══════════════════════════════════════════════════════════════ */
+export default function AuditorPage() {
+  const [currentIdx, setCurrentIdx]       = useState(0);
+  const [zoomLevel, setZoomLevel]         = useState(100);
+  const [viewerWidth, setViewerWidth]     = useState(55);
+  const [mobileView, setMobileView]       = useState('form');
+  const [values, setValues]               = useState(() =>
+    indicators.reduce((a, i) => ({ ...a, [i.id]: { temuan: '', nilai: '', catatan: '' } }), {})
+  );
+  const [showReview, setShowReview]       = useState(false);
   const [showBackModal, setShowBackModal] = useState(false);
-  const [showSubmitModal, setShowSubmitModal] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [showSubmit, setShowSubmit]       = useState(false);
+  const [submitted, setSubmitted]         = useState(false);
+  const [loading, setLoading]             = useState(false);
 
-  const { courses } = useRps();
-  const { activePeriod } = usePeriod();
-  const { mutuDocs } = useMutu();
-  const { updateEvaluation, evaluateDocument, docEvaluations } = useEvaluation();
-  
-  const [selectedDocument, setSelectedDocument] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterProdi, setFilterProdi] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
+  const { courses }                       = useRps();
+  const { activePeriod }                  = usePeriod();
+  const { mutuDocs }                      = useMutu();
+  const { evaluateDocument, docEvaluations } = useEvaluation();
 
-  const allDocuments = useMemo(() => {
-    const docs = [];
-    courses.forEach(course => {
-      course.rpsFiles.forEach(file => {
-        docs.push({
-          id: file.id || `rps-${course.id}-${file.name}`,
-          name: file.name,
-          url: file.url,
-          course: { code: course.code, name: course.name, prodi: course.prodi },
-          isEvaluated: !!docEvaluations?.[file.id || `rps-${course.id}-${file.name}`],
-          type: 'RPS'
-        });
-      });
+  const [selectedDoc, setSelectedDoc]     = useState(null);
+  const [search, setSearch]               = useState('');
+  const [filterProdi, setFilterProdi]     = useState('');
+  const [filterStatus, setFilterStatus]   = useState('');
+
+  /* docs */
+  const allDocs = useMemo(() => {
+    const d = [];
+    courses.forEach(c => c.rpsFiles.forEach(f => {
+      const id = f.id || `rps-${c.id}-${f.name}`;
+      d.push({ id, name: f.name, url: f.url, course: { code: c.code, name: c.name, prodi: c.prodi }, isEvaluated: !!docEvaluations?.[id], type: 'RPS' });
+    }));
+    mutuDocs?.forEach(m => {
+      const id = `mutu-${m.id}`;
+      d.push({ id, name: m.file.name, url: m.file.url, course: { code: `C${m.indicatorId}`, name: 'Dokumen Mutu Prodi', prodi: m.prodi }, isEvaluated: !!docEvaluations?.[id], type: 'MUTU' });
     });
-    mutuDocs?.forEach(doc => {
-      const docId = `mutu-${doc.id}`;
-      docs.push({
-        id: docId,
-        name: doc.file.name,
-        url: doc.file.url,
-        course: { code: `C${doc.indicatorId}`, name: 'Dokumen Mutu Prodi', prodi: doc.prodi },
-        isEvaluated: !!docEvaluations?.[docId],
-        type: 'MUTU'
-      });
-    });
-    return docs;
+    return d;
   }, [courses, mutuDocs, docEvaluations]);
 
-  const filteredDocs = allDocuments.filter(doc => {
-    const matchSearch = doc.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                        doc.course.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        doc.course.code.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchProdi = filterProdi ? doc.course.prodi === filterProdi : true;
-    const matchStatus = filterStatus === 'done' ? doc.isEvaluated : 
-                        filterStatus === 'pending' ? !doc.isEvaluated : true;
-    return matchSearch && matchProdi && matchStatus;
+  const filtered = allDocs.filter(doc => {
+    const q = search.toLowerCase();
+    return (doc.name.toLowerCase().includes(q) || doc.course.name.toLowerCase().includes(q) || doc.course.code.toLowerCase().includes(q))
+      && (!filterProdi || doc.course.prodi === filterProdi)
+      && (filterStatus === 'done' ? doc.isEvaluated : filterStatus === 'pending' ? !doc.isEvaluated : true);
   });
 
-  const uniqueProdis = [...new Set([
-    ...courses.map(c => c.prodi),
-    ...(mutuDocs || []).map(d => d.prodi)
-  ])].filter(Boolean);
+  const prodis   = [...new Set([...courses.map(c => c.prodi), ...(mutuDocs||[]).map(d => d.prodi)])].filter(Boolean);
+  const doneCount = allDocs.filter(d => d.isEvaluated).length;
 
-  const current = indicators[currentIdx];
-  const currentVal = values[current.id];
-  const isLastIndicator = currentIdx === indicators.length - 1;
+  /* eval state */
+  const cur         = indicators[currentIdx];
+  const curVal      = values[cur.id];
+  const isLast      = currentIdx === indicators.length - 1;
   const filledCount = Object.values(values).filter(v => v.nilai).length;
+  const pctDone     = Math.round((filledCount / indicators.length) * 100);
 
-  const updateValue = (field, val) => {
-    setValues(prev => ({
-      ...prev,
-      [current.id]: { ...prev[current.id], [field]: val }
-    }));
-  };
+  const updateVal = useCallback((f, v) => {
+    setValues(prev => ({ ...prev, [cur.id]: { ...prev[cur.id], [f]: v } }));
+  }, [cur.id]);
+
+  const resetForm = useCallback(() => {
+    setValues(indicators.reduce((a, i) => ({ ...a, [i.id]: { temuan: '', nilai: '', catatan: '' } }), {}));
+    setCurrentIdx(0); setShowReview(false); setMobileView('form'); setZoomLevel(100);
+  }, []);
 
   const handleSaveNext = () => {
-    if (!currentVal.nilai) {
-      addToast('Harap pilih nilai sebelum melanjutkan.', 'warning');
-      return;
-    }
-    addToast(`Indikator ${current.kode} berhasil disimpan.`, 'success');
-    if (isLastIndicator) {
-      setShowReview(true);
-    } else {
-      setCurrentIdx(i => i + 1);
-    }
+    if (!curVal.nilai) { addToast('Harap pilih nilai terlebih dahulu.', 'warning'); return; }
+    addToast(`Indikator ${cur.kode} tersimpan ✓`, 'success');
+    if (isLast) setShowReview(true); else setCurrentIdx(i => i + 1);
   };
 
-  const handleFinalSubmit = async () => {
-    setShowSubmitModal(false);
-    setLoading(true);
-    await new Promise(r => setTimeout(r, 1000));
-    
-    const totalScore = Object.values(values).reduce((sum, v) => sum + (Number(v.nilai) || 0), 0);
-    const maxScore = indicators.length * 4; 
-    
-    const combinedCatatan = indicators
-      .map(ind => values[ind.id]?.catatan ? `[${ind.kode}] ${values[ind.id].catatan}` : null)
-      .filter(Boolean)
-      .join('\n');
-      
-    const combinedTemuan = indicators
-      .map(ind => values[ind.id]?.temuan ? `[${ind.kode}] ${values[ind.id].temuan}` : null)
-      .filter(Boolean)
-      .join('\n');
-
-    await evaluateDocument(
-      selectedDocument.id,
-      selectedDocument.course.prodi,
-      totalScore,
-      maxScore,
-      combinedCatatan,
-      combinedTemuan,
-      'Auditor Anda'
-    );
-    
-    setLoading(false);
-    setSubmitted(true);
-    addToast('Laporan evaluasi berhasil dikunci dan dikirim!', 'success');
+  const handleSubmit = async () => {
+    setShowSubmit(false); setLoading(true);
+    await new Promise(r => setTimeout(r, 1200));
+    const total = Object.values(values).reduce((s, v) => s + (Number(v.nilai)||0), 0);
+    const max   = indicators.length * 4;
+    const catatan = indicators.map(i => values[i.id]?.catatan ? `[${i.kode}] ${values[i.id].catatan}` : null).filter(Boolean).join('\n');
+    const temuan  = indicators.map(i => values[i.id]?.temuan  ? `[${i.kode}] ${values[i.id].temuan}`  : null).filter(Boolean).join('\n');
+    await evaluateDocument(selectedDoc.id, selectedDoc.course.prodi, total, max, catatan, temuan, 'Auditor');
+    setLoading(false); setSubmitted(true);
+    addToast('Laporan berhasil dikunci dan dikirim! 🎉', 'success');
   };
 
-  /* ── Success screen ─────────────────────────────────── */
+  /* ═══════════════════════════════════════════════════════════════
+     SUCCESS
+  ═══════════════════════════════════════════════════════════════ */
   if (submitted) {
+    const total = Object.values(values).reduce((s, v) => s + (Number(v.nilai)||0), 0);
+    const max   = indicators.length * 4;
+    const pct   = Math.round((total / max) * 100);
+    const col   = scoreColor(pct);
     return (
-      <div className="app-shell">
+      <div className="aud-shell">
         <Sidebar />
-        <main className="main-content">
-          <div className="flex-1 flex flex-col items-center justify-center text-center py-16 px-8 gap-5">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[var(--color-success)] to-[#10b981] flex items-center justify-center shadow-[0_12px_36px_rgba(5,150,105,0.35)] animate-[popIn_0.4s_ease-out]">
-              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
+        <main className="aud-main aud-success-wrap">
+          <div className="aud-anim-slide" style={{ maxWidth: 540, width: '100%', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 28 }}>
+            <div className="aud-anim-pop" style={{ width: 120, height: 120, borderRadius: '50%', background: `linear-gradient(135deg, ${col}, ${col}cc)`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 20px 60px ${col}44` }}>
+              <CheckSvg size={58} stroke={2.5} color="white" />
             </div>
-            <h1 className="text-3xl font-extrabold text-[var(--color-text)]">Laporan Berhasil Dikirim!</h1>
-            <p className="text-lg text-[var(--color-text-muted)] leading-[1.7] max-w-[480px]">
-              Evaluasi untuk <strong>{selectedDocument?.course?.prodi ?? 'Prodi'}</strong> telah dikunci dan dikirim ke sistem.<br />
-              Terima kasih atas kerja keras Anda sebagai Auditor.
-            </p>
-            <div className="flex gap-3 flex-wrap justify-center">
-              <button className="btn btn-outline" onClick={() => { setSubmitted(false); setSelectedDocument(null); setCurrentIdx(0); setValues(indicators.reduce((acc, ind) => ({ ...acc, [ind.id]: { temuan: '', nilai: '', catatan: '' } }), {})); }}>
-                Nilai Dokumen Lain
-              </button>
-              <Link href="/dashboard" className="btn btn-primary btn-lg">
-                Kembali ke Dashboard
+            <div>
+              <h1 style={{ fontSize: 26, fontWeight: 800, color: '#0F172A', margin: '0 0 8px' }}>Laporan Berhasil Dikirim! 🎉</h1>
+              <p style={{ color: '#64748B', lineHeight: 1.7, fontSize: 14, margin: 0 }}>
+                Evaluasi untuk <strong style={{ color: '#0F172A' }}>{selectedDoc?.course?.prodi}</strong> telah dikunci.<br />Terima kasih atas kontribusi Anda.
+              </p>
+            </div>
+            <div style={{ background: 'white', borderRadius: 20, border: '1.5px solid #E5E7EB', padding: 24, width: '100%', boxShadow: '0 8px 32px rgba(0,0,0,0.06)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 16 }}>
+                <div className="aud-score-ring" style={{ background: `${col}14`, border: `4px solid ${col}` }}>
+                  <span className="aud-score-ring-val" style={{ color: col }}>{total}</span>
+                  <span className="aud-score-ring-max">/{max}</span>
+                </div>
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ fontSize: 34, fontWeight: 900, color: '#0F172A', lineHeight: 1 }}>{pct}%</div>
+                  <span style={{ marginTop: 6, display: 'inline-block', padding: '3px 14px', borderRadius: 99, fontSize: 12, fontWeight: 700, background: `${col}18`, color: col }}>{scoreLabel(pct)}</span>
+                </div>
+              </div>
+              <div style={{ height: 7, background: '#F1F5F9', borderRadius: 99 }}>
+                <div style={{ height: '100%', width: `${pct}%`, background: col, borderRadius: 99, transition: 'width 1s ease' }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${indicators.length}, 1fr)`, gap: 8, marginTop: 16 }}>
+                {indicators.map(ind => {
+                  const n = Number(values[ind.id]?.nilai);
+                  const c = n >= 4 ? '#10B981' : n === 3 ? '#3B82F6' : n === 2 ? '#F59E0B' : '#EF4444';
+                  return (
+                    <div key={ind.id} style={{ textAlign: 'center', padding: '8px 4px', background: '#F8FAFC', borderRadius: 10, border: `1.5px solid ${c}30` }}>
+                      <div style={{ fontSize: 18, fontWeight: 900, color: c }}>{values[ind.id]?.nilai || '—'}</div>
+                      <div style={{ fontSize: 10, color: '#94A3B8', marginTop: 2 }}>{ind.kode}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 12, width: '100%', flexWrap: 'wrap' }}>
+              <button className="aud-btn-ghost" style={{ flex: 1, minWidth: 140 }} onClick={() => { setSubmitted(false); setSelectedDoc(null); resetForm(); }}>Nilai Dokumen Lain</button>
+              <Link href="/dashboard" style={{ flex: 1, minWidth: 140, textDecoration: 'none' }}>
+                <button className="aud-btn-primary" style={{ width: '100%' }}>Kembali ke Beranda</button>
               </Link>
             </div>
           </div>
@@ -226,133 +226,76 @@ export default function AuditorPage() {
     );
   }
 
-  /* ── Review screen ──────────────────────────────────── */
+  /* ═══════════════════════════════════════════════════════════════
+     REVIEW
+  ═══════════════════════════════════════════════════════════════ */
   if (showReview) {
-    const totalScore = Object.values(values).reduce((sum, v) => sum + (Number(v.nilai) || 0), 0);
-    const maxScore = indicators.length * 4;
-    const pct = Math.round((totalScore / maxScore) * 100);
-    const statusColor = pct > 80 ? 'success' : pct > 50 ? 'warning' : 'danger';
-    const statusLabel = pct > 80 ? 'Lulus' : pct > 50 ? 'Perlu Perhatian' : 'Kritis';
-
+    const total = Object.values(values).reduce((s, v) => s + (Number(v.nilai)||0), 0);
+    const max   = indicators.length * 4;
+    const pct   = Math.round((total / max) * 100);
+    const col   = scoreColor(pct);
     return (
-      <div className="app-shell">
+      <div className="aud-shell">
         <Sidebar />
         <ToastContainer />
-        <ConfirmModal
-          isOpen={showSubmitModal}
-          title="Kunci & Kirim Laporan?"
-          message="Setelah dikirim, penilaian Anda tidak dapat diubah lagi. Pastikan semua nilai sudah benar sebelum melanjutkan."
-          confirmLabel="Ya, Kunci & Kirim"
-          cancelLabel="Periksa Lagi"
-          onConfirm={handleFinalSubmit}
-          onCancel={() => setShowSubmitModal(false)}
-          type="warning"
-        />
-        <main className="main-content">
-          <div className="page-wrapper">
-            <Breadcrumb items={[
-              { label: 'Beranda', href: '/dashboard' },
-              { label: 'Ruang Evaluasi', href: '/auditor' },
-              { label: 'Review Penilaian' },
-            ]} />
+        <ConfirmModal isOpen={showSubmit} title="Kunci & Kirim Laporan?" message="Setelah dikirim, penilaian tidak dapat diubah." confirmLabel="Ya, Kunci & Kirim" cancelLabel="Periksa Lagi" onConfirm={handleSubmit} onCancel={() => setShowSubmit(false)} type="warning" />
+        <main className="aud-main aud-scroll">
+          <div className="aud-review aud-anim-slide">
+            <div className="aud-review-inner">
+              <Breadcrumb items={[{ label: 'Beranda', href: '/dashboard' }, { label: 'Ruang Evaluasi', href: '/auditor' }, { label: 'Review' }]} />
 
-            <div className="page-header">
-              <div>
-                <h1 className="page-title">📋 Review Penilaian</h1>
-                <p className="page-subtitle">{selectedDocument?.course?.prodi} · Periksa kembali sebelum mengunci laporan</p>
-              </div>
-            </div>
-
-            {/* Score summary card */}
-            <div className="bg-white border-[1.5px] border-[var(--color-border)] rounded-xl p-6 mb-6 shadow-sm">
-              <div className="flex items-center gap-6 mb-4">
-                <div 
-                  className="w-24 h-24 rounded-full flex items-baseline justify-center gap-0.5 shrink-0 border-4"
-                  style={{ backgroundColor: `var(--color-${statusColor}-light)`, borderColor: `var(--color-${statusColor})` }}
-                >
-                  <span className="text-3xl font-black text-[var(--color-text)]">{totalScore}</span>
-                  <span className="text-base font-semibold text-[var(--color-text-muted)]">/{maxScore}</span>
-                </div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', margin: '20px 0', flexWrap: 'wrap', gap: 12 }}>
                 <div>
-                  <div className="text-2xl font-extrabold text-[var(--color-text)] mb-1">{pct}%</div>
-                  <span className={`badge badge-${statusColor}`}>{statusLabel}</span>
-                  <p className="text-sm text-[var(--color-text-muted)] mt-2">Total skor akhir dari {indicators.length} indikator</p>
+                  <h1 style={{ fontSize: 22, fontWeight: 800, color: '#0F172A', margin: '0 0 4px' }}>📋 Review Penilaian</h1>
+                  <p style={{ fontSize: 13, color: '#64748B', margin: 0 }}>{selectedDoc?.course?.prodi} · Periksa sebelum mengunci</p>
                 </div>
-              </div>
-              <div className="mt-2">
-                <div className="progress-bar-track" style={{height: 8}}>
-                  <div className="progress-bar-fill" style={{width:`${pct}%`, background: `var(--color-${statusColor})`}} />
-                </div>
-              </div>
-            </div>
-
-            <div className={`card`}>
-              <h2 className="card-title" style={{marginBottom: 'var(--space-4)'}}>Rekap Seluruh Indikator</h2>
-              <div className="table-wrapper">
-                <table className="data-table" aria-label="Rekap penilaian auditor">
-                  <thead>
-                    <tr>
-                      <th>Kode</th>
-                      <th>Nama Indikator</th>
-                      <th>Temuan</th>
-                      <th style={{width: 100}}>Nilai</th>
-                      <th>Catatan</th>
-                      <th style={{width: 80}}>Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {indicators.map((ind, i) => {
-                      const v = values[ind.id];
-                      return (
-                        <tr key={ind.id}>
-                          <td><span className="inline-block bg-[var(--color-primary-light)] text-[var(--color-primary)] rounded-md px-2.5 py-1 font-bold text-xs tracking-wider">{ind.kode}</span></td>
-                          <td style={{fontWeight: 600}}>{ind.nama}</td>
-                          <td style={{maxWidth: 200, fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)'}}>
-                            {v.temuan || <span className="text-muted">—</span>}
-                          </td>
-                          <td>
-                            {v.nilai ? (
-                              <span className={`badge badge-${Number(v.nilai) >= 3 ? 'success' : Number(v.nilai) === 2 ? 'warning' : 'danger'}`}>
-                                Nilai {v.nilai}
-                              </span>
-                            ) : (
-                              <span className="badge badge-danger">Belum</span>
-                            )}
-                          </td>
-                          <td style={{maxWidth: 160, fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)'}}>
-                            {v.catatan || <span className="text-muted">—</span>}
-                          </td>
-                          <td>
-                            <button
-                              className="btn btn-sm btn-ghost"
-                              onClick={() => { setCurrentIdx(i); setShowReview(false); }}
-                              aria-label={`Edit penilaian ${ind.kode}`}
-                            >
-                              Edit
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                <button className="aud-btn-ghost" onClick={() => setShowReview(false)}>← Kembali Edit</button>
               </div>
 
-              <div className="flex items-center justify-between mt-6 pt-6 border-t border-[var(--color-border)]">
-                <button className="btn btn-ghost" onClick={() => setShowReview(false)}>
-                  ← Kembali Edit
-                </button>
-                <button
-                  className="btn btn-success btn-lg"
-                  onClick={() => setShowSubmitModal(true)}
-                  disabled={loading}
-                  aria-label="Kunci dan kirim laporan evaluasi"
-                >
-                  {loading ? (
-                    <><span className="spinner spinner-sm" /> Mengirim...</>
-                  ) : (
-                    <>🔒 Kunci & Kirim Laporan</>
-                  )}
+              {/* Score */}
+              <div className="aud-score-card">
+                <div className="aud-score-ring" style={{ background: `${col}14`, border: `4px solid ${col}` }}>
+                  <span className="aud-score-ring-val" style={{ color: col }}>{total}</span>
+                  <span className="aud-score-ring-max">/{max}</span>
+                </div>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 36, fontWeight: 900, color: '#0F172A', lineHeight: 1 }}>{pct}%</span>
+                    <span style={{ padding: '4px 14px', borderRadius: 99, fontSize: 12, fontWeight: 700, background: `${col}16`, color: col }}>{scoreLabel(pct)}</span>
+                  </div>
+                  <div style={{ height: 8, background: '#F1F5F9', borderRadius: 99, marginBottom: 6 }}>
+                    <div style={{ height: '100%', width: `${pct}%`, background: col, borderRadius: 99, transition: 'width 0.8s ease' }} />
+                  </div>
+                  <p style={{ fontSize: 12, color: '#64748B', margin: 0 }}>Skor dari {indicators.length} indikator</p>
+                </div>
+              </div>
+
+              {/* Recap */}
+              <div className="aud-recap-card">
+                <div className="aud-recap-head">Rekap Semua Indikator</div>
+                {indicators.map((ind, i) => {
+                  const v = values[ind.id]; const n = Number(v?.nilai);
+                  const nc = n>=4?'#10B981':n===3?'#3B82F6':n===2?'#F59E0B':'#EF4444';
+                  const nb = n>=4?'#ECFDF5':n===3?'#EFF6FF':n===2?'#FFFBEB':'#FEF2F2';
+                  return (
+                    <div key={ind.id} className="aud-recap-row">
+                      <span style={{ padding: '4px 10px', borderRadius: 6, background: '#EFF6FF', color: '#1A56DB', fontSize: 11, fontWeight: 800, flexShrink: 0 }}>{ind.kode}</span>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#0F172A', minWidth: 100 }}>{ind.icon} {ind.nama}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto', flexShrink: 0 }}>
+                        {v?.nilai
+                          ? <span style={{ padding: '3px 10px', borderRadius: 99, fontSize: 12, fontWeight: 700, background: nb, color: nc }}>Nilai {v.nilai}</span>
+                          : <span style={{ padding: '3px 10px', borderRadius: 99, fontSize: 12, fontWeight: 700, background: '#FEF2F2', color: '#EF4444' }}>Belum</span>}
+                        <button className="aud-btn-ghost" style={{ padding: '5px 12px', fontSize: 12 }} onClick={() => { setCurrentIdx(i); setShowReview(false); }}>Edit</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, flexWrap: 'wrap', paddingBottom: 24 }}>
+                <button className="aud-btn-ghost" onClick={() => setShowReview(false)}>← Kembali Edit</button>
+                <button className="aud-btn-success" onClick={() => setShowSubmit(true)} disabled={loading}>
+                  {loading ? '⏳ Mengirim...' : '🔒 Kunci & Kirim Laporan'}
                 </button>
               </div>
             </div>
@@ -362,360 +305,343 @@ export default function AuditorPage() {
     );
   }
 
-  /* ── Main page ──────────────────────────────────────── */
+  /* ═══════════════════════════════════════════════════════════════
+     MAIN PAGE
+  ═══════════════════════════════════════════════════════════════ */
   return (
-    <div className="app-shell">
+    <div className="aud-shell">
       <Sidebar />
       <ToastContainer />
-      <ConfirmModal
-        isOpen={showBackModal}
-        title="Kembali ke Halaman Sebelumnya?"
-        message="Progress yang belum disimpan pada indikator ini akan hilang. Apakah Anda yakin ingin kembali?"
-        confirmLabel="Ya, Kembali"
-        cancelLabel="Tetap di Sini"
-        onConfirm={() => { setShowBackModal(false); if (currentIdx > 0) setCurrentIdx(i => i - 1); }}
-        onCancel={() => setShowBackModal(false)}
-      />
+      <ConfirmModal isOpen={showBackModal} title="Kembali ke Indikator Sebelumnya?" message="Progress belum tersimpan akan hilang." confirmLabel="Ya, Kembali" cancelLabel="Tetap di Sini" onConfirm={() => { setShowBackModal(false); if (currentIdx > 0) setCurrentIdx(i => i - 1); }} onCancel={() => setShowBackModal(false)} />
 
-      <main className="main-content">
-        {!selectedDocument ? (
-          /* ── Document list ───────────────────────────── */
-          <div className="page-wrapper">
-            <Breadcrumb items={[
-              { label: 'Beranda', href: '/dashboard' },
-              { label: 'Ruang Evaluasi' },
-            ]} />
+      <main className="aud-main">
 
-            <div className="page-header flex items-center justify-between">
-              <div>
-                <h1 className="page-title">Ruang Evaluasi Dokumen</h1>
-                <p className="page-subtitle">
-                  Periode: <strong>{activePeriod.name} {activePeriod.semester}</strong> — Pilih dokumen yang ingin dinilai
-                </p>
-              </div>
-              <div className="hidden sm:flex gap-3">
-                <div className="flex flex-col items-center bg-[var(--color-success-light)] border border-[rgba(5,150,105,0.2)] rounded-lg py-3 px-5 min-w-[80px]">
-                  <span className="text-2xl font-extrabold text-[var(--color-text)] leading-none">{allDocuments.filter(d => d.isEvaluated).length}</span>
-                  <span className="text-xs text-[var(--color-text-muted)] font-semibold mt-1 whitespace-nowrap">Sudah Dinilai</span>
+        {/* ── DOCUMENT LIST ─────────────────────────────────────── */}
+        {!selectedDoc ? (
+          <div className="aud-scroll">
+            {/* HERO BANNER */}
+            <div className="aud-hero">
+              <Breadcrumb items={[{ label: 'Beranda', href: '/dashboard' }, { label: 'Ruang Evaluasi' }]} />
+              <h1 className="aud-hero-title" style={{ marginTop: 12 }}>Ruang Evaluasi Dokumen</h1>
+              <p className="aud-hero-sub">Periode: {activePeriod?.name} {activePeriod?.semester} — Pilih dokumen untuk dinilai</p>
+              <div className="aud-stats">
+                <div className="aud-stat">
+                  <span className="aud-stat-val">{allDocs.length}</span>
+                  <span className="aud-stat-label">Total Dokumen</span>
                 </div>
-                <div className="flex flex-col items-center bg-[var(--color-warning-light)] border border-[rgba(217,119,6,0.2)] rounded-lg py-3 px-5 min-w-[80px]">
-                  <span className="text-2xl font-extrabold text-[var(--color-text)] leading-none">{allDocuments.filter(d => !d.isEvaluated).length}</span>
-                  <span className="text-xs text-[var(--color-text-muted)] font-semibold mt-1 whitespace-nowrap">Belum Dinilai</span>
+                <div className="aud-stat">
+                  <span className="aud-stat-val">{doneCount}</span>
+                  <span className="aud-stat-label">Sudah Dinilai</span>
+                </div>
+                <div className="aud-stat">
+                  <span className="aud-stat-val">{allDocs.length - doneCount}</span>
+                  <span className="aud-stat-label">Belum Dinilai</span>
                 </div>
               </div>
             </div>
 
-            {/* Search & filter bar */}
-            <div className="flex flex-col sm:flex-row gap-3 mb-6 flex-wrap">
-              <div className="flex-1 min-w-[220px] flex items-center gap-3 bg-white border-[1.5px] border-[var(--color-border)] rounded-lg px-4 text-[var(--color-text-muted)] transition-all focus-within:border-[var(--color-primary)] focus-within:shadow-[0_0_0_3px_var(--color-primary-light)]">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                </svg>
-                <input 
-                  type="text" 
-                  className="flex-1 border-none outline-none bg-transparent py-3 text-base text-[var(--color-text)] placeholder:text-[var(--color-text-muted)]" 
-                  placeholder="Cari nama dokumen, mata kuliah, atau kode..." 
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  aria-label="Cari dokumen"
-                />
-              </div>
-              <select className="h-12 px-4 border-[1.5px] border-[var(--color-border)] rounded-lg bg-white text-[var(--color-text)] text-sm font-medium cursor-pointer min-w-full sm:min-w-[170px] transition-colors focus:outline-none focus:border-[var(--color-primary)]" value={filterProdi} onChange={e => setFilterProdi(e.target.value)} aria-label="Filter program studi">
-                <option value="">Semua Program Studi</option>
-                {uniqueProdis.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-              <select className="h-12 px-4 border-[1.5px] border-[var(--color-border)] rounded-lg bg-white text-[var(--color-text)] text-sm font-medium cursor-pointer min-w-full sm:min-w-[170px] transition-colors focus:outline-none focus:border-[var(--color-primary)]" value={filterStatus} onChange={e => setFilterStatus(e.target.value)} aria-label="Filter status">
-                <option value="">Semua Status</option>
-                <option value="pending">Belum Dinilai</option>
-                <option value="done">Sudah Dinilai</option>
-              </select>
-            </div>
-
-            {/* Document grid */}
-            {filteredDocs.length > 0 ? (
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
-                {filteredDocs.map(doc => (
-                  <div key={doc.id} className={`bg-white border-[1.5px] border-[var(--color-border)] rounded-xl overflow-hidden flex flex-col transition-all shadow-sm hover:border-[var(--color-primary)] hover:shadow-[0_8px_24px_rgba(59,130,246,0.12)] hover:-translate-y-0.5 ${doc.isEvaluated ? '!border-[rgba(5,150,105,0.3)] bg-gradient-to-br from-white to-[#f0fdf4] hover:!border-[var(--color-success)] hover:!shadow-[0_8px_24px_rgba(5,150,105,0.12)]' : ''}`}>
-                    <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)]">
-                      <div className={`w-10 h-10 rounded-md flex items-center justify-center shrink-0 ${doc.type === 'RPS' ? 'bg-[var(--color-primary-light)] text-[var(--color-primary)]' : 'bg-[var(--color-warning-light)] text-[var(--color-warning)]'}`}>
-                        {doc.type === 'RPS' ? (
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                            <polyline points="14 2 14 8 20 8"/>
-                          </svg>
-                        ) : (
-                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                          </svg>
-                        )}
-                      </div>
-                      <span className={`badge ${doc.isEvaluated ? 'badge-success' : 'badge-warning'}`}>
-                        {doc.isEvaluated ? '✓ Dinilai' : '⏳ Pending'}
-                      </span>
-                    </div>
-
-                    <div className="p-4 flex-1 flex flex-col gap-1">
-                      <p className="text-xs font-bold text-[var(--color-text-muted)] uppercase tracking-wider m-0">{doc.type} · {doc.course.code}</p>
-                      <h3 className="text-base font-bold text-[var(--color-text)] m-0 leading-[1.4] overflow-hidden line-clamp-2" title={doc.name}>{doc.name}</h3>
-                      <p className="text-sm text-[var(--color-text-muted)] m-0 mt-1">{doc.course.prodi}</p>
-                    </div>
-
-                    <div className="py-3 px-4 bg-[var(--color-bg)] border-t border-[var(--color-border)]">
-                      <button
-                        className={`btn btn-sm ${doc.isEvaluated ? 'btn-outline' : 'btn-primary'} w-full`}
-                        onClick={() => { setSelectedDocument(doc); setCurrentIdx(0); setValues(indicators.reduce((acc, ind) => ({ ...acc, [ind.id]: { temuan: '', nilai: '', catatan: '' } }), {})); }}
-                        aria-label={`${doc.isEvaluated ? 'Nilai ulang' : 'Nilai'} dokumen ${doc.name}`}
-                      >
-                        {doc.isEvaluated ? 'Nilai Ulang' : 'Nilai Dokumen →'}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className={`card flex flex-col items-center justify-center text-center py-16 px-8 gap-4 text-[var(--color-text-muted)]`}>
-                <div className="w-20 h-20 bg-[var(--color-bg)] rounded-full flex items-center justify-center text-[var(--color-border)]">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                  </svg>
+            {/* Progress strip */}
+            {allDocs.length > 0 && (
+              <div className="aud-progress-strip">
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#64748B', whiteSpace: 'nowrap' }}>Progress</span>
+                <div className="aud-progress-bar">
+                  <div className="aud-progress-fill" style={{ width: `${allDocs.length ? (doneCount/allDocs.length)*100 : 0}%` }} />
                 </div>
-                <h3 className="text-lg font-bold text-[var(--color-text)] m-0">Tidak ada dokumen ditemukan</h3>
-                <p>Coba sesuaikan kata kunci pencarian atau filter Anda.</p>
-                <button className="btn btn-outline mt-2" onClick={() => { setSearchQuery(''); setFilterProdi(''); setFilterStatus(''); }}>
-                  Reset Filter
-                </button>
+                <span className="aud-progress-text">{doneCount}/{allDocs.length}</span>
               </div>
             )}
+
+            <div className="aud-body">
+              {/* Toolbar */}
+              <div className="aud-toolbar">
+                <div className="aud-search">
+                  <SearchIcon />
+                  <input type="text" placeholder="Cari nama dokumen, mata kuliah, atau kode..." value={search} onChange={e => setSearch(e.target.value)} aria-label="Cari dokumen" />
+                  {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', padding: 2, display: 'flex' }} aria-label="Hapus"><XIcon /></button>}
+                </div>
+                <select className="aud-filter" value={filterProdi} onChange={e => setFilterProdi(e.target.value)} aria-label="Filter prodi">
+                  <option value="">Semua Program Studi</option>
+                  {prodis.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+                <select className="aud-filter" value={filterStatus} onChange={e => setFilterStatus(e.target.value)} aria-label="Filter status">
+                  <option value="">Semua Status</option>
+                  <option value="pending">Belum Dinilai</option>
+                  <option value="done">Sudah Dinilai</option>
+                </select>
+              </div>
+
+              {(search || filterProdi || filterStatus) && (
+                <p style={{ fontSize: 12, color: '#64748B', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {filtered.length} dari {allDocs.length} dokumen
+                  <button onClick={() => { setSearch(''); setFilterProdi(''); setFilterStatus(''); }} style={{ fontSize: 12, fontWeight: 600, color: '#1A56DB', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Reset</button>
+                </p>
+              )}
+
+              {filtered.length > 0 ? (
+                <>
+                  {/* Desktop: Table */}
+                  <div className="aud-table">
+                    <div className="aud-table-head">
+                      <span>Dokumen</span>
+                      <span>Tipe</span>
+                      <span>Status</span>
+                      <span style={{ textAlign: 'right' }}>Aksi</span>
+                    </div>
+                    {filtered.map(doc => (
+                      <div key={doc.id} className="aud-table-row">
+                        <div className="aud-row-doc">
+                          <div className="aud-row-icon" style={{ background: doc.type === 'RPS' ? '#EFF6FF' : '#FFFBEB', color: doc.type === 'RPS' ? '#1A56DB' : '#D97706' }}>
+                            {doc.type === 'RPS' ? <DocSvg /> : <MutuSvg />}
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <p className="aud-row-name" title={doc.name}>{doc.name}</p>
+                            <p className="aud-row-prodi">{doc.course.prodi} · {doc.course.code}</p>
+                          </div>
+                        </div>
+                        <div><span className="aud-row-type">{doc.type}</span></div>
+                        <div>
+                          <span className="aud-row-status" style={{ background: doc.isEvaluated ? '#ECFDF5' : '#FFFBEB', color: doc.isEvaluated ? '#059669' : '#D97706' }}>
+                            {doc.isEvaluated ? '✓ Dinilai' : '⏳ Pending'}
+                          </span>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <button className="aud-row-btn"
+                            style={{ background: doc.isEvaluated ? 'white' : '#1A56DB', color: doc.isEvaluated ? '#374151' : 'white', border: doc.isEvaluated ? '1.5px solid #D1D9E6' : 'none' }}
+                            onClick={() => { setSelectedDoc(doc); resetForm(); }}>
+                            {doc.isEvaluated ? '🔄 Ulang' : '📝 Nilai'}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Mobile/Tablet: Cards */}
+                  <div className="aud-card-grid">
+                    {filtered.map(doc => (
+                      <div key={doc.id} className="aud-dcard">
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div className="aud-row-icon" style={{ background: doc.type === 'RPS' ? '#EFF6FF' : '#FFFBEB', color: doc.type === 'RPS' ? '#1A56DB' : '#D97706' }}>
+                            {doc.type === 'RPS' ? <DocSvg /> : <MutuSvg />}
+                          </div>
+                          <span className="aud-row-status" style={{ background: doc.isEvaluated ? '#ECFDF5' : '#FFFBEB', color: doc.isEvaluated ? '#059669' : '#D97706' }}>
+                            {doc.isEvaluated ? '✓ Dinilai' : '⏳ Pending'}
+                          </span>
+                        </div>
+                        <div>
+                          <p style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', margin: '0 0 3px' }}>{doc.type} · {doc.course.code}</p>
+                          <h3 className="aud-row-name" style={{ whiteSpace: 'normal', WebkitLineClamp: 2, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{doc.name}</h3>
+                          <p style={{ fontSize: 12, color: '#64748B', margin: '4px 0 0' }}>{doc.course.prodi}</p>
+                        </div>
+                        <button className="aud-row-btn" style={{ width: '100%', padding: '10px', background: doc.isEvaluated ? 'white' : '#1A56DB', color: doc.isEvaluated ? '#374151' : 'white', border: doc.isEvaluated ? '1.5px solid #D1D9E6' : 'none' }}
+                          onClick={() => { setSelectedDoc(doc); resetForm(); }}>
+                          {doc.isEvaluated ? '🔄 Nilai Ulang' : '📝 Mulai Penilaian'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="aud-empty">
+                  <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <SearchIcon />
+                  </div>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, color: '#0F172A', margin: 0 }}>Tidak ada dokumen ditemukan</h3>
+                  <p style={{ fontSize: 13, color: '#64748B', margin: 0 }}>Coba ubah kata kunci atau filter</p>
+                  <button className="aud-btn-ghost" onClick={() => { setSearch(''); setFilterProdi(''); setFilterStatus(''); }}>Reset Filter</button>
+                </div>
+              )}
+            </div>
           </div>
 
         ) : (
-          /* ── Split-screen Evaluator ─────────────────── */
-          <>
-            {/* Top bar */}
-            <div className="flex items-start justify-between py-4 px-6 bg-white border-b border-[var(--color-border)] flex-wrap gap-4 shadow-[0_1px_0_var(--color-border)]">
-              <div className="flex flex-col gap-1">
+          /* ── EVALUATOR ──────────────────────────────────────── */
+          <div className="aud-eval-wrap">
+
+            {/* Header */}
+            <div className="aud-eval-header">
+              <div className="aud-eval-info">
                 <Breadcrumb items={[
                   { label: 'Beranda', href: '/dashboard' },
-                  { label: 'Ruang Evaluasi', href: '/auditor', onClick: (e) => { e.preventDefault(); setSelectedDocument(null); } },
-                  { label: selectedDocument.course.name },
+                  { label: 'Evaluasi', href: '/auditor', onClick: e => { e.preventDefault(); setSelectedDoc(null); resetForm(); } },
+                  { label: selectedDoc.course.name },
                 ]} />
-                <h1 className="text-xl font-bold text-[var(--color-text)] m-0 mt-1">
-                  <span className="text-[var(--color-primary)]">{selectedDocument.name}</span>
-                </h1>
-                <p className="text-sm text-[var(--color-text-muted)] m-0">{selectedDocument.course.prodi} · {selectedDocument.course.code}</p>
+                <p className="aud-eval-docname" title={selectedDoc.name}>{selectedDoc.name}</p>
+                <p className="aud-eval-docsub">{selectedDoc.course.prodi} · {selectedDoc.course.code}</p>
               </div>
-              <div className="flex items-end flex-col gap-2 pt-3">
-                <div className="flex flex-col items-end gap-2">
-                  <div className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
-                    <span><strong>{filledCount}</strong> / {indicators.length}</span>
-                    <span>Indikator Dinilai</span>
+              <div className="aud-eval-progress">
+                <div style={{ position: 'relative', width: 48, height: 48 }}>
+                  <ProgressRing pct={pctDone} size={48} stroke={5} />
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#0F172A' }}>
+                    {filledCount}/{indicators.length}
                   </div>
-                  <div className="progress-bar-track" style={{width: 180}}>
-                    <div className="progress-bar-fill" style={{width:`${(filledCount/indicators.length)*100}%`}} />
-                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                  <span style={{ fontSize: 13, fontWeight: 800, color: '#0F172A' }}>{pctDone}%</span>
+                  <span style={{ fontSize: 10, color: '#94A3B8' }}>selesai</span>
                 </div>
               </div>
             </div>
 
-            {/* Indicator tabs */}
-            <div className="flex gap-2 py-3 px-6 bg-white border-b border-[var(--color-border)] overflow-x-auto flex-nowrap scrollbar-hide" role="tablist" aria-label="Navigasi indikator">
+            {/* Stepper */}
+            <div className="aud-stepper" style={{ paddingBottom: 28 }}>
               {indicators.map((ind, i) => {
-                const v = values[ind.id];
-                const isDone = !!v.nilai;
-                const isActive = i === currentIdx;
+                const isDone = !!values[ind.id]?.nilai;
+                const isAct  = i === currentIdx;
                 return (
-                  <button
-                    key={ind.id}
-                    role="tab"
-                    aria-selected={isActive}
-                    aria-controls={`panel-${ind.id}`}
-                    className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold border-2 border-[var(--color-border)] bg-[var(--color-bg)] text-[var(--color-text-muted)] cursor-pointer transition-all whitespace-nowrap shrink-0 hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] hover:bg-[var(--color-primary-light)] ${isActive ? '!border-[var(--color-primary)] !bg-[var(--color-primary)] !text-white' : ''} ${isDone && !isActive ? '!border-[var(--color-success)] !bg-[var(--color-success-light)] !text-[var(--color-success)]' : ''}`}
-                    onClick={() => setCurrentIdx(i)}
-                  >
-                    {isDone && (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <polyline points="20 6 9 17 4 12"/>
-                      </svg>
-                    )}
-                    {ind.kode}
-                  </button>
+                  <div key={ind.id} className="aud-step">
+                    {i > 0 && <div className={`aud-step-line${isDone || values[indicators[i-1].id]?.nilai ? ' filled' : ''}`} />}
+                    <div className={`aud-step-dot${isAct ? ' active' : ''}${isDone && !isAct ? ' done' : ''}`} onClick={() => setCurrentIdx(i)} title={`${ind.kode} — ${ind.nama}`}>
+                      {isDone && !isAct ? <CheckSvg size={14} stroke={3} /> : <span>{i + 1}</span>}
+                      <span className="aud-step-label">{ind.kode}</span>
+                    </div>
+                  </div>
                 );
               })}
             </div>
 
-            {/* Split-screen */}
-            <div className="flex flex-col lg:flex-row h-auto lg:h-[calc(100vh-170px)] overflow-hidden">
-              {/* Left: Document Viewer */}
-              <div className="w-full lg:w-[58%] h-[50vh] lg:h-auto shrink-0 border-r-0 lg:border-r-2 border-[var(--color-border)] flex flex-col bg-[#f3f4f8]" id={`panel-${current.id}`}>
-                <div className="flex items-center justify-between py-3 px-4 bg-white border-b border-[var(--color-border)] gap-3 shrink-0">
-                  <span className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-muted)] overflow-hidden text-ellipsis whitespace-nowrap">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                      <polyline points="14 2 14 8 20 8"/>
-                    </svg>
-                    {selectedDocument.name}
-                  </span>
-                  <div className="flex items-center gap-2 shrink-0 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg p-1">
-                    <button
-                      className="w-8 h-8 rounded-md border-none bg-transparent flex items-center justify-center cursor-pointer text-[var(--color-text-muted)] transition-all hover:not(:disabled):bg-[var(--color-primary-light)] hover:not(:disabled):text-[var(--color-primary)] disabled:opacity-35 disabled:cursor-not-allowed"
-                      onClick={() => setZoomLevel(z => Math.max(50, z - 25))}
-                      aria-label="Perkecil tampilan"
-                      disabled={zoomLevel <= 50}
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/>
-                      </svg>
-                    </button>
-                    <span className="text-sm font-bold text-[var(--color-text)] min-w-[38px] text-center" aria-live="polite">{zoomLevel}%</span>
-                    <button
-                      className="w-8 h-8 rounded-md border-none bg-transparent flex items-center justify-center cursor-pointer text-[var(--color-text-muted)] transition-all hover:not(:disabled):bg-[var(--color-primary-light)] hover:not(:disabled):text-[var(--color-primary)] disabled:opacity-35 disabled:cursor-not-allowed"
-                      onClick={() => setZoomLevel(z => Math.min(200, z + 25))}
-                      aria-label="Perbesar tampilan"
-                      disabled={zoomLevel >= 200}
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
-                      </svg>
-                    </button>
+            {/* Mobile toggle */}
+            <div className="aud-mtoggle">
+              {[{ id: 'form', label: '✏️ Form Penilaian' }, { id: 'doc', label: '📄 Lihat Dokumen' }].map(tab => (
+                <button key={tab.id} className="aud-mtoggle-btn"
+                  style={{ background: mobileView === tab.id ? 'white' : '#F8FAFC', color: mobileView === tab.id ? '#1A56DB' : '#64748B', borderBottom: `2px solid ${mobileView === tab.id ? '#1A56DB' : 'transparent'}` }}
+                  onClick={() => setMobileView(tab.id)}>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Split */}
+            <div className="aud-split">
+
+              {/* LEFT: Viewer (desktop only) */}
+              <div className="aud-viewer" style={{ width: `${viewerWidth}%` }}>
+                <div className="aud-viewer-bar">
+                  <span className="aud-viewer-file">📄 {selectedDoc.name}</span>
+                  <div className="aud-zoom-grp">
+                    <button className="aud-zoom-btn" onClick={() => setZoomLevel(z => Math.max(50, z-25))} disabled={zoomLevel <= 50} aria-label="Perkecil"><ZoomOut /></button>
+                    <span className="aud-zoom-val">{zoomLevel}%</span>
+                    <button className="aud-zoom-btn" onClick={() => setZoomLevel(z => Math.min(200, z+25))} disabled={zoomLevel >= 200} aria-label="Perbesar"><ZoomIn /></button>
+                    <button className="aud-zoom-btn" onClick={() => setZoomLevel(100)} style={{ fontSize: 10, fontWeight: 700, width: 'auto', padding: '0 5px' }} aria-label="Reset zoom">↺</button>
+                  </div>
+                  <div className="aud-width-btns">
+                    {[40, 55, 65].map(w => (
+                      <button key={w} className={`aud-width-btn${viewerWidth === w ? ' on' : ''}`} onClick={() => setViewerWidth(w)}>{w}%</button>
+                    ))}
                   </div>
                 </div>
-                <div className="flex-1 overflow-hidden">
-                  <iframe
-                    src={selectedDocument.url}
-                    title="Preview PDF"
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      border: 'none',
-                      transform: `scale(${zoomLevel/100})`,
-                      transformOrigin: 'top center',
-                      transition: 'transform 0.2s ease',
-                      backgroundColor: '#fff'
-                    }}
-                  />
+                <div className="aud-viewer-body">
+                  <iframe src={selectedDoc.url} title={`Preview: ${selectedDoc.name}`}
+                    style={{ width: `${100/(zoomLevel/100)}%`, height: `${100/(zoomLevel/100)}%`, transform: `scale(${zoomLevel/100})`, transformOrigin: 'top left', transition: 'transform 0.2s ease' }} />
                 </div>
               </div>
 
-              {/* Right: Assessment Form */}
-              <div className="flex-1 flex flex-col h-auto lg:h-auto overflow-hidden bg-white">
-                <div className="flex-1 overflow-y-auto p-6 scrollbar-thin">
-
-                  {/* Indicator header */}
-                  <div className="flex items-start gap-4 mb-5 pb-5 border-b border-[var(--color-border)]">
-                    <div className="bg-gradient-to-br from-[var(--color-primary)] to-[var(--sidebar-bg)] text-white px-3.5 py-2 rounded-lg font-extrabold text-base shrink-0 tracking-wider shadow-[0_4px_12px_rgba(59,130,246,0.3)]">{current.kode}</div>
-                    <div>
-                      <h2 className="text-lg font-bold text-[var(--color-text)] flex items-center gap-2 flex-wrap m-0 mb-1">
-                        {current.nama}
-                        <HelpTooltip title={`Bantuan: ${current.kode}`} content={current.help} />
-                      </h2>
-                      <p className="text-sm text-[var(--color-text-muted)] m-0">Indikator {currentIdx + 1} dari {indicators.length}</p>
-                    </div>
+              {/* Mobile viewer */}
+              {mobileView === 'doc' && (
+                <div className="aud-mobile-viewer" style={{ display: 'flex', flexDirection: 'column', flex: 1, background: '#E8EDF3', overflow: 'hidden' }}>
+                  <div className="aud-viewer-bar">
+                    <span className="aud-viewer-file">📄 {selectedDoc.name}</span>
                   </div>
-
-                  {/* Rubrik */}
-                  <div className="bg-[var(--color-primary-light)] border border-[rgba(59,130,246,0.2)] border-l-4 border-l-[var(--color-primary)] rounded-lg p-4 mb-5">
-                    <div className="flex items-center gap-2 text-xs font-bold text-[var(--color-primary)] mb-2 uppercase tracking-wider">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                      </svg>
-                      Rubrik Penilaian
-                    </div>
-                    <p className="text-sm text-[var(--color-text)] leading-[1.75] m-0">{current.rubrik}</p>
+                  <div style={{ flex: 1, overflow: 'hidden' }}>
+                    <iframe src={selectedDoc.url} title={`Preview: ${selectedDoc.name}`} style={{ width: '100%', height: '100%', border: 'none' }} />
                   </div>
+                </div>
+              )}
 
-                  <div className="flex flex-col gap-5">
-                    {/* 1. Temuan */}
-                    <div className="form-group">
-                      <label className="form-label" htmlFor={`temuan-${current.id}`}>
-                        Temuan Standar
-                        <HelpTooltip title="Temuan Standar" content="Pilih temuan yang paling mendekati kondisi dokumen. Temuan ini akan muncul di laporan resmi." />
-                      </label>
-                      <select
-                        id={`temuan-${current.id}`}
-                        className="form-select"
-                        value={currentVal.temuan}
-                        onChange={e => updateValue('temuan', e.target.value)}
-                      >
-                        <option value="">— Pilih temuan —</option>
-                        {temuanOptions.map((opt, i) => (
-                          <option key={i} value={opt}>{opt}</option>
-                        ))}
-                      </select>
-                    </div>
+              {/* RIGHT: Form */}
+              {mobileView === 'form' && (
+                <div className="aud-form">
+                  <div className="aud-form-scroll">
 
-                    {/* 2. Nilai */}
-                    <div className="form-group">
-                      <label className="form-label">
-                        Nilai Indikator <span style={{color:'var(--color-danger)'}}>*</span>
-                        <HelpTooltip title="Skala Penilaian" content="Nilai diberikan dalam skala 1–4. Nilai 4 (Sangat Baik) artinya dokumen sangat lengkap dan sesuai standar. Nilai 1 (Kurang) artinya dokumen tidak memenuhi syarat." />
-                      </label>
-                      <div className="grid grid-cols-2 gap-3">
-                        {nilaiOptions.map((opt) => (
-                          <label
-                            key={opt.val}
-                            className={`flex flex-col items-center gap-1 py-4 px-3 border-2 border-[var(--color-border)] rounded-lg cursor-pointer transition-all text-center relative hover:-translate-y-px hover:shadow-md ${opt.color === 'green' ? 'hover:border-[var(--color-success)] hover:bg-[var(--color-success-light)]' : opt.color === 'blue' ? 'hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-light)]' : opt.color === 'yellow' ? 'hover:border-[var(--color-warning)] hover:bg-[var(--color-warning-light)]' : 'hover:border-[var(--color-danger)] hover:bg-[var(--color-danger-light)]'} ${currentVal.nilai === String(opt.val) ? (opt.color === 'green' ? '!border-[var(--color-success)] !bg-[var(--color-success-light)] shadow-[0_0_0_3px_rgba(5,150,105,0.15)]' : opt.color === 'blue' ? '!border-[var(--color-primary)] !bg-[var(--color-primary-light)] shadow-[0_0_0_3px_rgba(59,130,246,0.15)]' : opt.color === 'yellow' ? '!border-[var(--color-warning)] !bg-[var(--color-warning-light)] shadow-[0_0_0_3px_rgba(217,119,6,0.15)]' : '!border-[var(--color-danger)] !bg-[var(--color-danger-light)] shadow-[0_0_0_3px_rgba(220,38,38,0.15)]') : ''}`}
-                          >
-                            <input
-                              type="radio"
-                              name={`nilai-${current.id}`}
-                              value={String(opt.val)}
-                              checked={currentVal.nilai === String(opt.val)}
-                              onChange={e => updateValue('nilai', e.target.value)}
-                              className="absolute opacity-0 w-0 h-0"
-                              aria-label={`Nilai ${opt.val} — ${opt.label}`}
-                            />
-                            <span className={`text-[28px] font-black leading-none ${opt.color === 'green' ? 'text-[var(--color-success)]' : opt.color === 'blue' ? 'text-[var(--color-primary)]' : opt.color === 'yellow' ? 'text-[var(--color-warning)]' : 'text-[var(--color-danger)]'}`}>{opt.val}</span>
-                            <span className="text-sm font-bold text-[var(--color-text)] leading-tight">{opt.label}</span>
-                            <span className="text-xs text-[var(--color-text-muted)] leading-none">{opt.sub}</span>
-                          </label>
-                        ))}
+                    {/* Indicator header */}
+                    <div className="aud-ind-head">
+                      <div className="aud-ind-kode">{cur.kode}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <h2 className="aud-ind-name">
+                          <span aria-hidden="true">{cur.icon}</span>
+                          {cur.nama}
+                          <HelpTooltip title={`Bantuan: ${cur.kode}`} content={cur.help} />
+                        </h2>
+                        <p className="aud-ind-sub">Indikator {currentIdx + 1} dari {indicators.length}</p>
                       </div>
                     </div>
 
-                    {/* 3. Catatan */}
-                    <div className="form-group">
-                      <label className="form-label" htmlFor={`catatan-${current.id}`}>
-                        Catatan & Rekomendasi
-                        <span className="text-xs font-semibold text-[var(--color-text-muted)] bg-[var(--color-bg)] border border-[var(--color-border)] rounded-full px-2 py-0.5 ml-2">Opsional</span>
+                    {/* Rubrik section */}
+                    <div className="aud-section">
+                      <div className="aud-section-title">
+                        <CheckSvg size={11} stroke={2.5} color="#1D4ED8" /> Rubrik Penilaian
+                      </div>
+                      <div className="aud-rubrik">
+                        <p className="aud-rubrik-text">{cur.rubrik}</p>
+                      </div>
+                    </div>
+
+                    {/* Temuan */}
+                    <div className="aud-fg">
+                      <label htmlFor={`temuan-${cur.id}`} className="aud-label">
+                        Temuan Standar
+                        <HelpTooltip title="Temuan" content="Pilih temuan yang paling mendekati kondisi dokumen." />
                       </label>
-                      <textarea
-                        id={`catatan-${current.id}`}
-                        className="form-textarea"
-                        placeholder="Tuliskan catatan tambahan atau rekomendasi perbaikan yang spesifik untuk prodi..."
-                        value={currentVal.catatan}
-                        onChange={e => updateValue('catatan', e.target.value)}
-                        rows={4}
-                      />
+                      <select id={`temuan-${cur.id}`} className="aud-select" value={curVal.temuan} onChange={e => updateVal('temuan', e.target.value)}>
+                        <option value="">— Pilih temuan —</option>
+                        {temuanOptions.map((o, i) => <option key={i} value={o}>{o}</option>)}
+                      </select>
+                    </div>
+
+                    {/* Nilai */}
+                    <div className="aud-fg">
+                      <label className="aud-label">
+                        Nilai Indikator <span style={{ color: '#EF4444' }}>*</span>
+                        <HelpTooltip title="Skala Nilai" content="Skala 1–4. Nilai 4 = sangat sesuai standar. Nilai 1 = tidak memenuhi." />
+                      </label>
+                      <div className="aud-nilai-grid">
+                        {nilaiOptions.map(opt => {
+                          const sel = curVal.nilai === String(opt.val);
+                          return (
+                            <label key={opt.val} className="aud-nilai"
+                              style={sel ? { border: `2px solid ${opt.border}`, background: opt.bg, boxShadow: `0 0 0 3px ${opt.ring}`, transform: 'translateY(-2px)' } : {}}>
+                              <input type="radio" name={`nilai-${cur.id}`} value={String(opt.val)} checked={sel} onChange={e => updateVal('nilai', e.target.value)} aria-label={`Nilai ${opt.val}`} />
+                              <span className="aud-nilai-num" style={{ color: sel ? opt.text : '#9CA3AF' }}>{opt.val}</span>
+                              <span className="aud-nilai-label" style={{ color: sel ? opt.text : '#374151' }}>{opt.label}</span>
+                              <span className="aud-nilai-sub">{opt.sub}</span>
+                              {sel && (
+                                <div className="aud-nilai-check" style={{ background: opt.border }}>
+                                  <CheckSvg size={9} stroke={3.5} color="white" />
+                                </div>
+                              )}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Catatan */}
+                    <div className="aud-fg" style={{ marginBottom: 4 }}>
+                      <label htmlFor={`catatan-${cur.id}`} className="aud-label">
+                        Catatan & Rekomendasi
+                        <span className="aud-optional">Opsional</span>
+                      </label>
+                      <textarea id={`catatan-${cur.id}`} className="aud-textarea" value={curVal.catatan} onChange={e => updateVal('catatan', e.target.value)} rows={3} placeholder="Tuliskan catatan atau rekomendasi perbaikan..." />
+                    </div>
+                  </div>
+
+                  {/* Action bar */}
+                  <div className="aud-action">
+                    <button className="aud-btn-ghost" onClick={() => { if (currentIdx > 0) setShowBackModal(true); }} disabled={currentIdx === 0}>
+                      ← Sebelumnya
+                    </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#94A3B8' }}>
+                        {currentIdx + 1}<span style={{ color: '#D1D9E6' }}>/</span>{indicators.length}
+                      </span>
+                      <button className="aud-btn-primary" onClick={handleSaveNext}>
+                        {isLast ? '📋 Lihat Review' : 'Simpan & Lanjut →'}
+                      </button>
                     </div>
                   </div>
                 </div>
-
-                {/* Bottom action */}
-                <div className="flex items-center justify-between py-4 px-6 bg-white border-t-2 border-[var(--color-border)] shadow-[0_-4px_20px_rgba(0,0,0,0.06)] shrink-0">
-                  <button
-                    className="btn btn-ghost"
-                    onClick={() => { if (currentIdx > 0) setShowBackModal(true); }}
-                    disabled={currentIdx === 0}
-                    aria-label="Kembali ke indikator sebelumnya"
-                  >
-                    ← Sebelumnya
-                  </button>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold text-[var(--color-text-muted)]">
-                      {currentIdx + 1}/{indicators.length}
-                    </span>
-                    <button
-                      className="btn btn-primary btn-lg"
-                      onClick={handleSaveNext}
-                      aria-label={isLastIndicator ? 'Simpan dan lihat review' : 'Simpan dan lanjut'}
-                    >
-                      {isLastIndicator ? '📋 Lihat Review' : 'Simpan & Lanjut →'}
-                    </button>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
-          </>
+          </div>
         )}
       </main>
     </div>
