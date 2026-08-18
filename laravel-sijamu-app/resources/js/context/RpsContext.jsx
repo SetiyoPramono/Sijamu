@@ -1,13 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
-
-/* ── Initial seed data (mock — diganti fetch dari API saat backend siap) ──── */
-const MOCK_COURSES = [
-  { id: 1, code: 'MK101', name: 'Pemrograman Web Lanjut',  sks: 3, semester: 4, dosen: 'Dr. Ahmad Fauzi, M.Kom', prodi: 'Teknik Informatika',    rpsFiles: [] },
-  { id: 2, code: 'MK102', name: 'Kecerdasan Buatan',       sks: 3, semester: 5, dosen: 'Dr. Siti Rahayu, M.T',   prodi: 'Teknik Informatika',    rpsFiles: [] },
-  { id: 3, code: 'MK201', name: 'Statistika Terapan',      sks: 2, semester: 3, dosen: 'Prof. Budi Santoso, Dr.',prodi: 'Pendidikan Matematika', rpsFiles: [] },
-];
+import axios from 'axios';
 
 const RpsContext = createContext(null);
 
@@ -26,9 +20,8 @@ export function RpsProvider({ children }) {
       setLoading(true);
       setError(null);
       try {
-        // Simulasi network delay — hapus saat sudah ada backend
-        await new Promise(r => setTimeout(r, 400));
-        setCourses(MOCK_COURSES);
+        const res = await axios.get('/admin/api/courses');
+        setCourses(res.data);
       } catch (err) {
         setError(err.message ?? 'Gagal memuat data mata kuliah.');
       } finally {
@@ -43,35 +36,37 @@ export function RpsProvider({ children }) {
            setCourses(prev => [...prev, saved]);
    ─────────────────────────────────────────────────────────────── */
   const addCourse = useCallback(async (data) => {
-    const newCourse = {
-      ...data,
-      id: Date.now(),
-      sks: Number(data.sks),
-      semester: Number(data.semester),
-      rpsFiles: [],
-    };
-    setCourses(prev => [...prev, newCourse]);
-    return newCourse;
+    try {
+      const res = await axios.post('/admin/api/courses', data);
+      setCourses(prev => [...prev, res.data]);
+      return res.data;
+    } catch (err) {
+      throw err;
+    }
   }, []);
 
   /* ── Update course ──────────────────────────────────────────────
      TODO: await apiPut(`/api/mata-kuliah/${updated.id}`, updated);
    ─────────────────────────────────────────────────────────────── */
   const updateCourse = useCallback(async (updated) => {
-    setCourses(prev =>
-      prev.map(c =>
-        c.id === updated.id
-          ? { ...c, ...updated, sks: Number(updated.sks), semester: Number(updated.semester) }
-          : c
-      )
-    );
+    try {
+      const res = await axios.put(`/admin/api/courses/${updated.id}`, updated);
+      setCourses(prev => prev.map(c => c.id === updated.id ? res.data : c));
+    } catch (err) {
+      throw err;
+    }
   }, []);
 
   /* ── Delete course ──────────────────────────────────────────────
      TODO: await apiDelete(`/api/mata-kuliah/${id}`);
    ─────────────────────────────────────────────────────────────── */
   const deleteCourse = useCallback(async (id) => {
-    setCourses(prev => prev.filter(c => c.id !== id));
+    try {
+      await axios.delete(`/admin/api/courses/${id}`);
+      setCourses(prev => prev.filter(c => c.id !== id));
+    } catch (err) {
+      throw err;
+    }
   }, []);
 
   /* ── Upload RPS files ────────────────────────────────────────────
@@ -83,36 +78,50 @@ export function RpsProvider({ children }) {
    ─────────────────────────────────────────────────────────────── */
   const uploadRpsFile = useCallback(async (courseId, files) => {
     const fileArray = Array.from(files);
-    const newFileObjs = fileArray.map(file => ({
-      id: Date.now() + Math.random(),
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      url: URL.createObjectURL(file), // TODO: ganti dengan URL dari server
-      uploadedAt: new Date().toISOString(),
-    }));
+    const uploadedFiles = [];
 
+    for (const file of fileArray) {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('course_id', courseId);
+
+      try {
+        const res = await axios.post('/admin/api/rps/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        uploadedFiles.push(res.data);
+      } catch (err) {
+        throw err;
+      }
+    }
+
+    // Update local state so UI reflects immediately
     setCourses(prev =>
-      prev.map(c => 
-        c.id === courseId 
-          ? { ...c, rpsFiles: [...(c.rpsFiles || []), ...newFileObjs] } 
+      prev.map(c =>
+        c.id === courseId
+          ? { ...c, rpsFiles: [...(c.rpsFiles || []), ...uploadedFiles] }
           : c
       )
     );
-    return newFileObjs;
+    return uploadedFiles;
   }, []);
 
   /* ── Remove RPS file ────────────────────────────────────────────
      TODO: await apiDelete(`/api/rps/${courseId}/file/${fileId}`);
    ─────────────────────────────────────────────────────────────── */
   const removeRpsFile = useCallback(async (courseId, fileId) => {
-    setCourses(prev =>
-      prev.map(c => 
-        c.id === courseId 
-          ? { ...c, rpsFiles: (c.rpsFiles || []).filter(f => f.id !== fileId) } 
-          : c
-      )
-    );
+    try {
+      await axios.delete(`/admin/api/rps/${fileId}`);
+      setCourses(prev =>
+        prev.map(c =>
+          c.id === courseId
+            ? { ...c, rpsFiles: (c.rpsFiles || []).filter(f => f.id !== fileId) }
+            : c
+        )
+      );
+    } catch (err) {
+      throw err;
+    }
   }, []);
 
   /* ── Refresh dari server ─────────────────────────────────────── */
@@ -120,8 +129,8 @@ export function RpsProvider({ children }) {
     setLoading(true);
     setError(null);
     try {
-      await new Promise(r => setTimeout(r, 400));
-      setCourses(MOCK_COURSES); // TODO: fetch dari API
+      const res = await axios.get('/admin/api/courses');
+      setCourses(res.data);
     } catch (err) {
       setError(err.message ?? 'Gagal memuat data.');
     } finally {

@@ -97,5 +97,9 @@ class DatabaseSeeder extends Seeder
             'score' => 85,
             'notes' => 'Daftar pustaka perlu diperbarui ke edisi terbaru. Selebihnya sudah cukup baik.',
         ]);
+
+        $this->call([
+            UploadConfigSeeder::class,
+        ]);
     }
 }

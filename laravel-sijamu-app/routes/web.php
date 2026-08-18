@@ -63,7 +63,42 @@ Route::middleware('auth')->group(function () {
         Route::get('/upload', function () {
             return Inertia::render('Sijamu/admin/upload/page');
         })->middleware('permission:manage_upload');
+
+        // Upload Config API endpoints
+        Route::get('/api/prodis', [\App\Http\Controllers\UploadConfigController::class, 'getProdis']);
+        Route::get('/api/docs', [\App\Http\Controllers\UploadConfigController::class, 'getDocs']);
+
+        // Users API
+        Route::get('/api/users', function() {
+            return response()->json(\App\Models\User::select('id', 'name', 'email', 'role')->get());
+        });
+
+        // Course API endpoints
+        Route::get('/api/courses', [\App\Http\Controllers\CourseController::class, 'index']);
+
+        Route::middleware('permission:manage_upload')->group(function() {
+            Route::post('/api/prodis', [\App\Http\Controllers\UploadConfigController::class, 'storeProdi']);
+            Route::put('/api/prodis/{id}', [\App\Http\Controllers\UploadConfigController::class, 'updateProdi']);
+            Route::delete('/api/prodis/{id}', [\App\Http\Controllers\UploadConfigController::class, 'destroyProdi']);
+
+            Route::post('/api/docs', [\App\Http\Controllers\UploadConfigController::class, 'storeDoc']);
+            Route::put('/api/docs/{id}', [\App\Http\Controllers\UploadConfigController::class, 'updateDoc']);
+            Route::delete('/api/docs/{id}', [\App\Http\Controllers\UploadConfigController::class, 'destroyDoc']);
+
+            Route::post('/api/courses', [\App\Http\Controllers\CourseController::class, 'store']);
+            Route::put('/api/courses/{id}', [\App\Http\Controllers\CourseController::class, 'update']);
+            Route::delete('/api/courses/{id}', [\App\Http\Controllers\CourseController::class, 'destroy']);
+        });
+
+        // RPS file upload/delete — accessible to all authenticated users (own RPS)
+        Route::post('/api/rps/upload', [\App\Http\Controllers\RpsController::class, 'upload']);
+        Route::delete('/api/rps/{id}', [\App\Http\Controllers\RpsController::class, 'destroy']);
     });
+
+    // Mutu Documents API endpoints
+    Route::get('/api/mutu-documents', [\App\Http\Controllers\MutuDocumentController::class, 'index']);
+    Route::post('/api/mutu-documents', [\App\Http\Controllers\MutuDocumentController::class, 'store']);
+    Route::delete('/api/mutu-documents/{id}', [\App\Http\Controllers\MutuDocumentController::class, 'destroy']);
 });
 
 require __DIR__.'/auth.php';

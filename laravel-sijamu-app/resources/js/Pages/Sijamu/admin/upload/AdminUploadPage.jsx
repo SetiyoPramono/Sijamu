@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useRef, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
@@ -7,13 +7,13 @@ import ConfirmModal from '@/components/ConfirmModal';
 import { ToastContainer, addToast } from '@/components/Toast';
 import { useUploadConfig } from '@/context/UploadConfigContext';
 
-const uid = () => Math.random().toString(36).slice(2, 9);
+import axios from 'axios';
 
 const emptyProdiForm = { id: '', nama: '' };
 const emptyDocForm   = { id: '', kode: '', nama: '', help: '' };
 
 export default function AdminUploadPage() {
-  const { prodiList, setProdiList, docList, setDocList } = useUploadConfig();
+  const { prodiList, setProdiList, docList, setDocList, loading } = useUploadConfig();
 
   const [activeTab, setActiveTab] = useState('prodi');
 
@@ -40,28 +40,43 @@ export default function AdminUploadPage() {
   const openAddProdi = () => { setProdiForm(emptyProdiForm); setProdiEditing(false); setShowProdiModal(true); };
   const openEditProdi = (p) => { setProdiForm({ ...p }); setProdiEditing(true); setShowProdiModal(true); };
 
-  const handleProdiSubmit = (e) => {
+  const handleProdiSubmit = async (e) => {
     e.preventDefault();
     const nama = prodiForm.nama.trim();
     if (!nama) { addToast('Nama program studi tidak boleh kosong.', 'warning'); return; }
+    
+    // Validasi duplikasi (client-side)
     if (!prodiEditing && prodiList.some(p => p.nama.toLowerCase() === nama.toLowerCase())) {
       addToast('Program studi dengan nama tersebut sudah ada.', 'warning'); return;
     }
-    if (prodiEditing) {
-      setProdiList(prev => prev.map(p => p.id === prodiForm.id ? { ...p, nama } : p));
-      addToast('Program studi berhasil diperbarui.', 'success');
-    } else {
-      setProdiList(prev => [...prev, { id: uid(), nama }]);
-      addToast('Program studi berhasil ditambahkan.', 'success');
+
+    try {
+      if (prodiEditing) {
+        const res = await axios.put(`/admin/api/prodis/${prodiForm.id}`, { nama });
+        setProdiList(prev => prev.map(p => p.id === prodiForm.id ? { id: res.data.id, nama: res.data.name } : p));
+        addToast('Program studi berhasil diperbarui.', 'success');
+      } else {
+        const res = await axios.post('/admin/api/prodis', { nama });
+        setProdiList(prev => [...prev, { id: res.data.id, nama: res.data.name }]);
+        addToast('Program studi berhasil ditambahkan.', 'success');
+      }
+      setShowProdiModal(false);
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Gagal menyimpan program studi.', 'error');
     }
-    setShowProdiModal(false);
   };
 
-  const confirmDeleteProdi = () => {
+  const confirmDeleteProdi = async () => {
     const nama = prodiList.find(p => p.id === deleteProdiId)?.nama || '';
-    setProdiList(prev => prev.filter(p => p.id !== deleteProdiId));
-    addToast('Program studi "' + nama + '" telah dihapus.', 'info');
-    setDeleteProdiId(null);
+    try {
+      await axios.delete(`/admin/api/prodis/${deleteProdiId}`);
+      setProdiList(prev => prev.filter(p => p.id !== deleteProdiId));
+      addToast('Program studi "' + nama + '" telah dihapus.', 'info');
+    } catch (err) {
+      addToast('Gagal menghapus program studi.', 'error');
+    } finally {
+      setDeleteProdiId(null);
+    }
   };
 
   const prefixes = [...new Set(docList.map(d => d.kode.split('.')[0]))].sort();
@@ -74,30 +89,44 @@ export default function AdminUploadPage() {
   const openAddDoc  = () => { setDocForm(emptyDocForm); setDocEditing(false); setShowDocModal(true); };
   const openEditDoc = (d) => { setDocForm({ ...d }); setDocEditing(true); setShowDocModal(true); };
 
-  const handleDocSubmit = (e) => {
+  const handleDocSubmit = async (e) => {
     e.preventDefault();
     const kode = docForm.kode.trim();
     const nama = docForm.nama.trim();
     const help = docForm.help.trim();
     if (!kode || !nama) { addToast('Kode dan nama dokumen wajib diisi.', 'warning'); return; }
+    
     if (!docEditing && docList.some(d => d.kode.toLowerCase() === kode.toLowerCase())) {
       addToast('Kode dokumen tersebut sudah digunakan.', 'warning'); return;
     }
-    if (docEditing) {
-      setDocList(prev => prev.map(d => d.id === docForm.id ? { ...d, kode, nama, help } : d));
-      addToast('Dokumen berhasil diperbarui.', 'success');
-    } else {
-      setDocList(prev => [...prev, { id: uid(), kode, nama, help }]);
-      addToast('Dokumen ' + kode + ' berhasil ditambahkan.', 'success');
+
+    try {
+      if (docEditing) {
+        const res = await axios.put(`/admin/api/docs/${docForm.id}`, { kode, nama, help });
+        setDocList(prev => prev.map(d => d.id === docForm.id ? res.data : d));
+        addToast('Indikator dokumen berhasil diperbarui.', 'success');
+      } else {
+        const res = await axios.post('/admin/api/docs', { kode, nama, help });
+        setDocList(prev => [...prev, res.data]);
+        addToast('Dokumen ' + kode + ' berhasil ditambahkan.', 'success');
+      }
+      setShowDocModal(false);
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Gagal menyimpan dokumen.', 'error');
     }
-    setShowDocModal(false);
   };
 
-  const confirmDeleteDoc = () => {
-    const doc = docList.find(d => d.id === deleteDocId);
-    setDocList(prev => prev.filter(d => d.id !== deleteDocId));
-    addToast('Dokumen "' + (doc?.nama || '') + '" telah dihapus.', 'info');
-    setDeleteDocId(null);
+  const confirmDeleteDoc = async () => {
+    const nama = docList.find(d => d.id === deleteDocId)?.nama || '';
+    try {
+      await axios.delete(`/admin/api/docs/${deleteDocId}`);
+      setDocList(prev => prev.filter(d => d.id !== deleteDocId));
+      addToast('Dokumen "' + nama + '" telah dihapus.', 'info');
+    } catch (err) {
+      addToast('Gagal menghapus dokumen.', 'error');
+    } finally {
+      setDeleteDocId(null);
+    }
   };
 
   return (
@@ -242,8 +271,15 @@ export default function AdminUploadPage() {
             ))}
           </div>
 
-          {activeTab === 'prodi' && (
-            <div className="card">
+          {loading ? (
+            <div className="flex justify-center items-center py-20 text-[var(--color-primary)]">
+               <svg className="animate-spin h-10 w-10" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+               </svg>
+            </div>
+          ) : activeTab === 'prodi' && (
+            <div className="card animate-[fadeIn_0.3s_ease]">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
                 <h2 className="card-title !mb-0">Daftar Program Studi</h2>
                 <div className="flex gap-3 flex-wrap">
@@ -310,7 +346,7 @@ export default function AdminUploadPage() {
             </div>
           )}
 
-          {activeTab === 'dokumen' && (
+          {!loading && activeTab === 'dokumen' && (
             <div className="card">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
                 <h2 className="card-title !mb-0">Daftar Dokumen Wajib</h2>

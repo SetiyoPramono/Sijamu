@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import axios from 'axios';
 
 const MutuContext = createContext(null);
 
@@ -10,42 +11,51 @@ export function MutuProvider({ children }) {
 
   useEffect(() => {
     const loadData = async () => {
-      setLoading(true);
-      await new Promise(r => setTimeout(r, 400));
-      setMutuDocs([
-        { id: 1, prodi: 'Teknik Informatika', indicatorId: 1, file: { name: 'SK_VMTS_TI.pdf', url: '/dummy.pdf', type: 'application/pdf', size: 102400 } }
-      ]);
-      setLoading(false);
+      try {
+        setLoading(true);
+        const res = await axios.get('/api/mutu-documents');
+        setMutuDocs(res.data);
+      } catch (err) {
+        console.error("Gagal mengambil data dokumen mutu", err);
+      } finally {
+        setLoading(false);
+      }
     };
     loadData();
   }, []);
 
-  const addMutuDoc = useCallback(async (prodi, indicatorId, file) => {
-    await new Promise(r => setTimeout(r, 1000));
-    const savedFile = { 
-      name: file.name, 
-      size: file.size, 
-      type: file.type, 
-      url: URL.createObjectURL(file) 
-    };
-    
-    const newDoc = {
-      id: Date.now() + Math.random(),
-      prodi,
-      indicatorId,
-      file: savedFile
-    };
+  const addMutuDoc = useCallback(async (prodiId, indicatorId, file) => {
+    // Validasi: hanya PDF yang diterima
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (!isPdf) {
+      throw new Error('Hanya file PDF yang diizinkan.');
+    }
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      throw new Error('Ukuran file melebihi batas 10MB.');
+    }
+
+    const formData = new FormData();
+    formData.append('study_program_id', prodiId);
+    formData.append('document_indicator_id', indicatorId);
+    formData.append('file', file);
+
+    const res = await axios.post('/api/mutu-documents', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+
+    const newDoc = res.data.document;
 
     setMutuDocs(prev => {
-      const filtered = prev.filter(d => !(d.prodi === prodi && d.indicatorId === indicatorId));
+      const filtered = prev.filter(d => !(d.prodiId == prodiId && d.indicatorId == indicatorId));
       return [...filtered, newDoc];
     });
 
-    return savedFile;
+    return newDoc.file;
   }, []);
 
   const deleteMutuDoc = useCallback(async (docId) => {
-    await new Promise(r => setTimeout(r, 500));
+    await axios.delete(`/api/mutu-documents/${docId}`);
     setMutuDocs(prev => prev.filter(d => d.id !== docId));
   }, []);
 

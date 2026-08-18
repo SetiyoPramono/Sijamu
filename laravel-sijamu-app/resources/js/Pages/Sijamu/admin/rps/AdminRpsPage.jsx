@@ -5,9 +5,10 @@ import Breadcrumb from '@/components/Breadcrumb';
 import { ToastContainer, addToast } from '@/components/Toast';
 import ConfirmModal from '@/components/ConfirmModal';
 import { useRps } from '@/context/RpsContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 
-const emptyForm = { code: '', name: '', sks: '', semester: '', dosen: '', prodi: '' };
+const emptyForm = { code: '', name: '', sks: '', semester: '', user_id: '', study_program_id: '' };
 
 export default function AdminRpsPage() {
   const { courses, addCourse, updateCourse, deleteCourse } = useRps();
@@ -17,6 +18,15 @@ export default function AdminRpsPage() {
   const [showForm, setShowForm]   = useState(false);
   const [deleteId, setDeleteId]   = useState(null);
   const [search, setSearch]       = useState('');
+  
+  const [prodis, setProdis] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [viewFilesFor, setViewFilesFor] = useState(null); // course object for modal
+
+  useEffect(() => {
+    axios.get('/admin/api/prodis').then(res => setProdis(res.data)).catch(() => {});
+    axios.get('/admin/api/users').then(res => setUsers(res.data)).catch(() => {});
+  }, []);
 
   const filtered = courses.filter((c) =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -27,15 +37,19 @@ export default function AdminRpsPage() {
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isEditing) {
-      updateCourse(formData);
-      addToast(`RPS "${formData.name}" berhasil diperbarui.`, 'success');
-      setIsEditing(false);
-    } else {
-      addCourse(formData);
-      addToast(`Mata kuliah "${formData.name}" berhasil ditambahkan.`, 'success');
+    try {
+      if (isEditing) {
+        await updateCourse(formData);
+        addToast(`RPS "${formData.name}" berhasil diperbarui.`, 'success');
+        setIsEditing(false);
+      } else {
+        await addCourse(formData);
+        addToast(`Mata kuliah "${formData.name}" berhasil ditambahkan.`, 'success');
+      }
+    } catch {
+      addToast('Gagal menyimpan mata kuliah.', 'error');
     }
     setFormData(emptyForm);
     setShowForm(false);
@@ -48,11 +62,16 @@ export default function AdminRpsPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     const name = courses.find((c) => c.id === deleteId)?.name || '';
-    deleteCourse(deleteId);
-    addToast(`"${name}" berhasil dihapus.`, 'success');
-    setDeleteId(null);
+    try {
+      await deleteCourse(deleteId);
+      addToast(`"${name}" berhasil dihapus.`, 'success');
+    } catch {
+      addToast('Gagal menghapus mata kuliah.', 'error');
+    } finally {
+      setDeleteId(null);
+    }
   };
 
   const handleCancel = () => {
@@ -139,16 +158,20 @@ export default function AdminRpsPage() {
 
                   <div className="form-group md:col-span-1 lg:col-span-2">
                     <label className="form-label" htmlFor="rps-dosen">Dosen Pengampu</label>
-                    <input id="rps-dosen" name="dosen" className="form-input"
-                      placeholder="Nama lengkap & gelar"
-                      value={formData.dosen} onChange={handleChange} required />
+                    <select id="rps-dosen" name="user_id" className="form-input"
+                      value={formData.user_id || ''} onChange={handleChange} required>
+                      <option value="">-- Pilih Dosen Pengampu --</option>
+                      {users.map(u => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)}
+                    </select>
                   </div>
 
                   <div className="form-group md:col-span-1 lg:col-span-2">
                     <label className="form-label" htmlFor="rps-prodi">Program Studi</label>
-                    <input id="rps-prodi" name="prodi" className="form-input"
-                      placeholder="Program Studi"
-                      value={formData.prodi} onChange={handleChange} required />
+                    <select id="rps-prodi" name="study_program_id" className="form-input"
+                      value={formData.study_program_id || ''} onChange={handleChange} required>
+                      <option value="">-- Pilih Program Studi --</option>
+                      {prodis.map(p => <option key={p.id} value={p.id}>{p.name || p.nama}</option>)}
+                    </select>
                   </div>
                 </div>
 
@@ -248,9 +271,16 @@ export default function AdminRpsPage() {
                         </td>
                         <td style={{ textAlign: 'center' }}>
                           {course.rpsFiles && course.rpsFiles.length > 0 ? (
-                            <span className="badge badge-success">{course.rpsFiles.length} File Tersedia</span>
+                            <button
+                              className="badge badge-success cursor-pointer hover:opacity-80 transition-opacity"
+                              style={{ border: 'none', background: 'var(--color-success-light, #d1fae5)', color: 'var(--color-success, #059669)', cursor: 'pointer' }}
+                              onClick={() => setViewFilesFor(course)}
+                              title="Klik untuk melihat daftar file RPS"
+                            >
+                              📄 {course.rpsFiles.length} File
+                            </button>
                           ) : (
-                            <span className="badge badge-danger">✕ Belum</span>
+                            <span className="badge badge-danger">✕ Belum Ada</span>
                           )}
                         </td>
                         <td style={{ textAlign: 'center' }}>
@@ -291,6 +321,100 @@ export default function AdminRpsPage() {
 
         </div>
       </main>
+
+      {/* ── Modal: Lihat File RPS ─── */}
+      {viewFilesFor && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.45)' }}
+          onClick={() => setViewFilesFor(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-[560px] p-6 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between mb-5">
+              <div>
+                <h3 className="text-lg font-bold text-[var(--color-text)]">
+                  📄 File RPS — {viewFilesFor.name}
+                </h3>
+                <p className="text-sm text-[var(--color-text-muted)] mt-0.5">
+                  Kode: <strong className="font-mono">{viewFilesFor.code}</strong> &bull; {viewFilesFor.prodi}
+                </p>
+              </div>
+              <button
+                onClick={() => setViewFilesFor(null)}
+                className="text-[var(--color-text-light)] hover:text-[var(--color-text)] transition-colors p-1"
+                aria-label="Tutup"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+
+            {/* File List */}
+            {viewFilesFor.rpsFiles && viewFilesFor.rpsFiles.length > 0 ? (
+              <ul className="flex flex-col gap-3 max-h-[380px] overflow-y-auto pr-1">
+                {viewFilesFor.rpsFiles.map((file, i) => (
+                  <li
+                    key={file.id ?? i}
+                    className="flex items-center gap-3 p-3 rounded-lg border border-[var(--color-border)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-light)] transition-all"
+                  >
+                    {/* PDF Icon */}
+                    <div className="shrink-0 w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="9" y1="13" x2="15" y2="13"/>
+                        <line x1="9" y1="17" x2="15" y2="17"/>
+                      </svg>
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[var(--color-text)] truncate">{file.name}</p>
+                      <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                        {file.uploader && <span>Diunggah oleh <strong>{file.uploader}</strong> &bull; </span>}
+                        {new Date(file.uploadedAt).toLocaleString('id-ID', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' })}
+                      </p>
+                      {file.status && (
+                        <span className={`badge ${file.status === 'audited' ? 'badge-success' : file.status === 'revision' ? 'badge-danger' : 'badge-info'} text-xs mt-1`}>
+                          {file.status === 'pending' ? 'Menunggu' : file.status === 'audited' ? 'Disetujui' : 'Perlu Revisi'}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Download/View Button */}
+                    <a
+                      href={file.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-sm btn-outline shrink-0"
+                      title="Buka/Unduh file"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                        <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                      </svg>
+                      Buka
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="text-center py-8 text-[var(--color-text-muted)]">
+                <p>Belum ada file RPS yang diunggah untuk mata kuliah ini.</p>
+              </div>
+            )}
+
+            <div className="mt-5 flex justify-end">
+              <button className="btn btn-ghost" onClick={() => setViewFilesFor(null)}>Tutup</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

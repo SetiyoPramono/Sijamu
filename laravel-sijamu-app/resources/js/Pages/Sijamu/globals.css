@@ -651,6 +651,28 @@ img, svg {
   }
 }
 
+/* ============================================================
+   Sidebar — Mobile/Desktop visibility
+   ============================================================ */
+
+/* Mobile top navbar (burger button) — only shown below 1024px */
+[aria-label="Bilah navigasi seluler"] {
+  display: none;
+}
+
+/* Close button inside sidebar — only shown below 1024px */
+[aria-label="Tutup menu"] {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  [aria-label="Bilah navigasi seluler"] {
+    display: flex;
+  }
+  [aria-label="Tutup menu"] {
+    display: flex;
+  }
+}
 @media (max-width: 768px) {
   :root {
     --font-size-base: 14px;

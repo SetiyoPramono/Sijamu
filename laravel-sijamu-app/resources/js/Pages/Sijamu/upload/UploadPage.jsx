@@ -29,7 +29,7 @@ export default function UploadPage() {
   const fileInputRef = useRef(null);
 
   // Derived data
-  const prodiNames = prodiList.map(p => p.nama);
+  // Derived data
   const buildIndicators = () => docList.map(d => ({
     id: d.id, kode: d.kode, nama: d.nama, help: d.help, status: 'empty', file: null,
   }));
@@ -39,7 +39,8 @@ export default function UploadPage() {
     const base = buildIndicators();
     if (selectedProdi) {
       setIndicators(base.map(ind => {
-        const existingDoc = mutuDocs.find(d => d.prodi === selectedProdi && d.indicatorId === ind.id);
+        // Use loose equality (==) to handle potential string/number mismatches from API
+        const existingDoc = mutuDocs.find(d => d.prodiId == selectedProdi && d.indicatorId == ind.id);
         if (existingDoc) {
           return { ...ind, status: 'done', file: existingDoc.file, globalDocId: existingDoc.id };
         }
@@ -64,10 +65,10 @@ export default function UploadPage() {
 
   const processFile = useCallback(async (file, indicatorId) => {
     if (!file) return;
-    const validTypes = ['application/pdf', 'application/zip', 'image/jpeg', 'image/png'];
+    const validTypes = ['application/pdf'];
     const maxSize = 10 * 1024 * 1024;
-    if (!validTypes.includes(file.type) && !file.name.endsWith('.zip')) {
-      addToast('Format file tidak didukung. Gunakan PDF, ZIP, JPG, atau PNG.', 'error');
+    if (!validTypes.includes(file.type) && !file.name.toLowerCase().endsWith('.pdf')) {
+      addToast('Format file tidak didukung. Hanya file PDF yang diizinkan.', 'error');
       return;
     }
     if (file.size > maxSize) {
@@ -86,7 +87,8 @@ export default function UploadPage() {
       ));
       addToast(`✓ Dokumen "${file.name}" berhasil diunggah!`, 'success');
     } catch (err) {
-      addToast('Gagal mengunggah dokumen. Silakan coba lagi.', 'error');
+      const msg = err?.message || 'Gagal mengunggah dokumen. Silakan coba lagi.';
+      addToast(msg, 'error');
     } finally {
       setUploading(false);
       setActiveModal(null);
@@ -143,7 +145,7 @@ export default function UploadPage() {
               <h1 className="text-3xl font-extrabold text-[var(--color-success)]">Pengunggahan Selesai!</h1>
               <p className="text-lg text-[var(--color-text-muted)] leading-[1.7]">
                 <strong>{filledCount} dari {totalCount}</strong> dokumen berhasil diunggah untuk{' '}
-                <strong>{selectedProdi}</strong>.
+                <strong>{prodiList.find(p => p.id == selectedProdi)?.nama}</strong>.
               </p>
               {filledCount < totalCount && (
                 <div className="py-4 px-5 bg-[var(--color-warning-light)] border border-[rgba(194,120,3,0.3)] rounded-lg text-base text-[var(--color-warning)] font-semibold">
@@ -185,6 +187,10 @@ export default function UploadPage() {
                 <span className="inline-block bg-[var(--color-primary-light)] text-[var(--color-primary)] py-1 px-[10px] rounded-sm text-xs font-bold mb-2">{modalIndicator.kode}</span>
                 <h2 id="upload-modal-title" className="text-xl font-bold text-[var(--color-text)] mb-2">{modalIndicator.nama}</h2>
                 <p className="text-sm text-[var(--color-text-muted)] leading-[1.6]">{modalIndicator.help}</p>
+                <div className="flex items-center gap-2 mt-3 py-2 px-3 bg-red-50 border border-red-200 rounded-lg">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <p className="text-xs text-red-600 font-semibold">Hanya file <strong>PDF</strong> yang diterima. Maksimal <strong>10MB</strong> per file.</p>
+                </div>
               </div>
               <button
                 className="shrink-0 w-9 h-9 rounded-md flex items-center justify-center text-[var(--color-text-light)] transition-colors cursor-pointer bg-transparent border-none hover:not(:disabled):bg-[var(--color-bg)] hover:not(:disabled):text-[var(--color-text)]"
@@ -228,15 +234,14 @@ export default function UploadPage() {
                 </p>
                 <p className="text-sm text-[var(--color-text-muted)]">atau klik untuk memilih file dari komputer</p>
                 <div className="flex gap-2 flex-wrap justify-center">
-                  <span className="badge badge-info">PDF</span>
-                  <span className="badge badge-info">ZIP</span>
-                  <span className="badge badge-info">JPG/PNG</span>
+                  <span className="badge badge-danger" style={{ fontWeight: 700 }}>PDF Only</span>
                   <span className="badge badge-info">Maks. 10MB</span>
                 </div>
+                <p className="text-xs text-[var(--color-text-muted)] mt-1">⚠️ Hanya format PDF yang diterima. File selain PDF akan ditolak.</p>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".pdf,.zip,.jpg,.jpeg,.png"
+                  accept=".pdf"
                   className="absolute opacity-0 w-0 h-0 pointer-events-none"
                   onChange={handleFileSelect}
                   aria-hidden="true"
@@ -265,7 +270,7 @@ export default function UploadPage() {
           <Breadcrumb items={[
             { label: 'Beranda', href: '/dashboard' },
             { label: 'Unggah Dokumen', href: '/upload' },
-            { label: currentStep === 1 ? 'Pilih Prodi' : selectedProdi, href: '/upload' },
+            { label: currentStep === 1 ? 'Pilih Prodi' : prodiList.find(p => p.id == selectedProdi)?.nama, href: '/upload' },
           ]} />
 
           <div className="page-header">
@@ -299,24 +304,24 @@ export default function UploadPage() {
                 Pilih program studi yang akan Anda lengkapi dokumennya. Pastikan Anda hanya mengunggah dokumen untuk prodi yang menjadi tanggung jawab Anda.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
-                {prodiNames.map((prodi) => (
+                {prodiList.map((prodi) => (
                   <label
-                    key={prodi}
-                    className={`flex items-center gap-3 px-5 py-4 border-2 border-[var(--color-border)] rounded-lg cursor-pointer transition-all hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-light)] ${selectedProdi === prodi ? '!border-[var(--color-primary)] !bg-[var(--color-primary-light)] shadow-[0_0_0_3px_rgba(26,86,219,0.15)]' : ''}`}
+                    key={prodi.id}
+                    className={`flex items-center gap-3 px-5 py-4 border-2 border-[var(--color-border)] rounded-lg cursor-pointer transition-all hover:border-[var(--color-primary)] hover:bg-[var(--color-primary-light)] ${selectedProdi == prodi.id ? '!border-[var(--color-primary)] !bg-[var(--color-primary-light)] shadow-[0_0_0_3px_rgba(26,86,219,0.15)]' : ''}`}
                   >
                     <input
                       type="radio"
                       name="prodi"
-                      value={prodi}
-                      checked={selectedProdi === prodi}
-                      onChange={() => setSelectedProdi(prodi)}
+                      value={prodi.id}
+                      checked={selectedProdi == prodi.id}
+                      onChange={() => setSelectedProdi(prodi.id)}
                       className="absolute opacity-0 w-0 h-0"
-                      aria-label={`Pilih prodi ${prodi}`}
+                      aria-label={`Pilih prodi ${prodi.nama}`}
                     />
-                    <span className={`w-[26px] h-[26px] rounded-full border-2 border-[var(--color-border)] flex items-center justify-center font-bold text-sm shrink-0 transition-all text-transparent ${selectedProdi === prodi ? '!bg-[var(--color-primary)] !border-[var(--color-primary)] !text-white' : ''}`} aria-hidden="true">
-                      {selectedProdi === prodi ? '✓' : ''}
+                    <span className={`w-[26px] h-[26px] rounded-full border-2 border-[var(--color-border)] flex items-center justify-center font-bold text-sm shrink-0 transition-all text-transparent ${selectedProdi == prodi.id ? '!bg-[var(--color-primary)] !border-[var(--color-primary)] !text-white' : ''}`} aria-hidden="true">
+                      {selectedProdi == prodi.id ? '✓' : ''}
                     </span>
-                    <span className={`text-base font-semibold text-[var(--color-text)] ${selectedProdi === prodi ? '!text-[var(--color-primary)]' : ''}`}>{prodi}</span>
+                    <span className={`text-base font-semibold text-[var(--color-text)] ${selectedProdi == prodi.id ? '!text-[var(--color-primary)]' : ''}`}>{prodi.nama}</span>
                   </label>
                 ))}
               </div>
@@ -339,7 +344,7 @@ export default function UploadPage() {
               <div className={`card`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-lg font-bold text-[var(--color-text)]">{selectedProdi}</div>
+                    <div className="text-lg font-bold text-[var(--color-text)]">{prodiList.find(p => p.id == selectedProdi)?.nama}</div>
                     <div className="text-base text-[var(--color-text-muted)] mt-1">
                       <span className="font-extrabold text-[var(--color-primary)] text-xl">{filledCount}</span> dari {totalCount} dokumen diunggah
                     </div>
@@ -423,6 +428,15 @@ export default function UploadPage() {
                                       Lihat Feedback
                                     </button>
                                   )}
+                                  <a
+                                    href={ind.file.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn btn-sm btn-outline text-[var(--color-primary)] border-[var(--color-primary)] hover:bg-[var(--color-primary)] hover:text-white"
+                                    title="Lihat Dokumen"
+                                  >
+                                    Lihat
+                                  </a>
                                   <button
                                     className="btn btn-sm btn-outline"
                                     onClick={() => openModal(ind)}

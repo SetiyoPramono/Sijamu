@@ -39,11 +39,17 @@ export default function RpsPage() {
   const activeCourse = courses.find((c) => c.id === activeCourseId) ?? courses[0];
 
   /* ── Upload handler ───────────────────────────── */
-  const handleFiles = (files) => {
+  const handleFiles = async (files) => {
     if (!files || files.length === 0 || !activeCourse) return;
     
     const maxMb = 20;
+
+    // Filter: hanya PDF, maks 20MB
     const validFiles = Array.from(files).filter(file => {
+      if (!file.type.includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
+        addToast(`Format tidak didukung. Harap unggah file dalam format PDF.`, 'error');
+        return false;
+      }
       if (file.size > maxMb * 1024 * 1024) {
         addToast(`File "${file.name}" terlalu besar. Maksimal ${maxMb} MB.`, 'error');
         return false;
@@ -51,9 +57,14 @@ export default function RpsPage() {
       return true;
     });
 
-    if (validFiles.length > 0) {
-      uploadRpsFile(activeCourse.id, validFiles);
-      addToast(`${validFiles.length} file berhasil diunggah untuk ${activeCourse.name}.`, 'success');
+    if (validFiles.length === 0) return;
+
+    try {
+      await uploadRpsFile(activeCourse.id, validFiles);
+      addToast(`${validFiles.length} file PDF berhasil diunggah untuk ${activeCourse.name}.`, 'success');
+    } catch (err) {
+      const msg = err?.response?.data?.message || 'Gagal mengunggah file. Pastikan file adalah PDF yang valid.';
+      addToast(msg, 'error');
     }
   };
 
@@ -70,9 +81,13 @@ export default function RpsPage() {
     if (files) handleFiles(files);
   };
 
-  const handleRemove = (fileId) => {
-    removeRpsFile(activeCourse.id, fileId);
-    addToast('File RPS berhasil dihapus.', 'success');
+  const handleRemove = async (fileId) => {
+    try {
+      await removeRpsFile(activeCourse.id, fileId);
+      addToast('File RPS berhasil dihapus.', 'success');
+    } catch {
+      addToast('Gagal menghapus file. Silakan coba lagi.', 'error');
+    }
   };
 
   /* ── Render ───────────────────────────────────── */
@@ -341,8 +356,12 @@ export default function RpsPage() {
                       <p className="text-base text-[var(--color-text-muted)]">
                         atau klik untuk memilih file
                       </p>
-                      <p className="text-sm text-[var(--color-text-light)] mt-1">
-                        Format wajib: PDF &nbsp;·&nbsp; Maks. 20 MB
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="badge badge-danger" style={{ fontWeight: 700 }}>PDF Only</span>
+                        <span className="badge badge-info">Maks. 20MB</span>
+                      </div>
+                      <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                        ⚠️ Hanya file PDF yang diterima. File selain PDF akan ditolak otomatis.
                       </p>
                       <button
                         type="button"

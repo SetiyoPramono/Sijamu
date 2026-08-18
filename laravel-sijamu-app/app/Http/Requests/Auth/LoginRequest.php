@@ -42,7 +42,13 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt(['identity_number' => $this->string('nip'), 'password' => $this->string('password')], $this->boolean('remember'))) {
+        $loginField = $this->string('nip')->toString();
+        $password = $this->string('password')->toString();
+
+        if (
+            !Auth::attempt(['email' => $loginField, 'password' => $password], $this->boolean('remember')) &&
+            !Auth::attempt(['identity_number' => $loginField, 'password' => $password], $this->boolean('remember'))
+        ) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
@@ -81,6 +87,6 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->string('nip')).'|'.$this->ip());
+        return Str::transliterate(Str::lower($this->input('nip')).'|'.$this->ip());
     }
 }
