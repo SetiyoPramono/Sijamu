@@ -14,6 +14,7 @@ import { useRps } from '@/context/RpsContext';
 import { usePeriod } from '@/context/PeriodContext';
 import { useMutu } from '@/context/MutuContext';
 import { useEvaluation } from '@/context/EvaluationContext';
+import { useUploadConfig } from '@/context/UploadConfigContext';
 
 /* ── DATA ──────────────────────────────────────────────────────── */
 const indicators = [
@@ -101,6 +102,7 @@ export default function AuditorPage() {
   const { activePeriod }                  = usePeriod();
   const { mutuDocs }                      = useMutu();
   const { evaluateDocument, docEvaluations } = useEvaluation();
+  const { docList, categoryList }         = useUploadConfig();
 
   const [selectedDoc, setSelectedDoc]     = useState(null);
   const [search, setSearch]               = useState('');
@@ -112,14 +114,19 @@ export default function AuditorPage() {
     const d = [];
     courses.forEach(c => c.rpsFiles.forEach(f => {
       const id = f.id || `rps-${c.id}-${f.name}`;
-      d.push({ id, name: f.name, url: f.url, course: { code: c.code, name: c.name, prodi: c.prodi }, isEvaluated: !!docEvaluations?.[id], type: 'RPS' });
+      d.push({ id, name: f.name, url: f.url, course: { code: c.code, name: c.name, prodi: c.prodi, category: 'RPS' }, isEvaluated: !!docEvaluations?.[id], type: 'RPS' });
     }));
     mutuDocs?.forEach(m => {
       const id = `mutu-${m.id}`;
-      d.push({ id, name: m.file.name, url: m.file.url, course: { code: `C${m.indicatorId}`, name: 'Dokumen Mutu Prodi', prodi: m.prodi }, isEvaluated: !!docEvaluations?.[id], type: 'MUTU' });
+      const indicator = docList?.find(ind => String(ind.id) === String(m.indicatorId));
+      const code = indicator ? indicator.kode : `C${m.indicatorId}`;
+      const name = indicator ? indicator.nama : 'Dokumen Mutu Prodi';
+      const category = indicator ? categoryList?.find(c => String(c.id) === String(indicator.document_category_id)) : null;
+      const catName = category ? category.name : 'Tanpa Kategori';
+      d.push({ id, name: m.file.name, url: m.file.url, course: { code, name, prodi: m.prodi, category: catName }, isEvaluated: !!docEvaluations?.[id], type: 'MUTU' });
     });
     return d;
-  }, [courses, mutuDocs, docEvaluations]);
+  }, [courses, mutuDocs, docEvaluations, docList, categoryList]);
 
   const filtered = allDocs.filter(doc => {
     const q = search.toLowerCase();
@@ -395,7 +402,8 @@ export default function AuditorPage() {
                           </div>
                           <div style={{ minWidth: 0 }}>
                             <p className="aud-row-name" title={doc.name}>{doc.name}</p>
-                            <p className="aud-row-prodi">{doc.course.prodi} · {doc.course.code}</p>
+                            <p className="aud-row-prodi">{doc.course.prodi} · {doc.course.code} - {doc.course.name}</p>
+                            {doc.course.category && <p style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>{doc.course.category}</p>}
                           </div>
                         </div>
                         <div><span className="aud-row-type">{doc.type}</span></div>
@@ -428,9 +436,9 @@ export default function AuditorPage() {
                           </span>
                         </div>
                         <div>
-                          <p style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', margin: '0 0 3px' }}>{doc.type} · {doc.course.code}</p>
+                          <p style={{ fontSize: 10, fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', margin: '0 0 3px' }}>{doc.type} · {doc.course.code} - {doc.course.name}</p>
                           <h3 className="aud-row-name" style={{ whiteSpace: 'normal', WebkitLineClamp: 2, display: '-webkit-box', WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{doc.name}</h3>
-                          <p style={{ fontSize: 12, color: '#64748B', margin: '4px 0 0' }}>{doc.course.prodi}</p>
+                          <p style={{ fontSize: 12, color: '#64748B', margin: '4px 0 0' }}>{doc.course.prodi}{doc.course.category && ` · ${doc.course.category}`}</p>
                         </div>
                         <button className="aud-row-btn" style={{ width: '100%', padding: '10px', background: doc.isEvaluated ? 'white' : '#1A56DB', color: doc.isEvaluated ? '#374151' : 'white', border: doc.isEvaluated ? '1.5px solid #D1D9E6' : 'none' }}
                           onClick={() => { setSelectedDoc(doc); resetForm(); }}>
@@ -466,7 +474,7 @@ export default function AuditorPage() {
                   { label: selectedDoc.course.name },
                 ]} />
                 <p className="aud-eval-docname" title={selectedDoc.name}>{selectedDoc.name}</p>
-                <p className="aud-eval-docsub">{selectedDoc.course.prodi} · {selectedDoc.course.code}</p>
+                <p className="aud-eval-docsub">{selectedDoc.course.prodi} · {selectedDoc.course.code} - {selectedDoc.course.name} {selectedDoc.course.category && `(${selectedDoc.course.category})`}</p>
               </div>
               <div className="aud-eval-progress">
                 <div style={{ position: 'relative', width: 48, height: 48 }}>
