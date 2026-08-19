@@ -12,4 +12,9 @@ class DocumentIndicator extends Model
     {
         return $this->belongsTo(DocumentCategory::class, 'document_category_id');
     }
+
+    public function criteria()
+    {
+        return $this->hasMany(DocumentIndicatorCriteria::class, 'document_indicator_id');
+    }
 }

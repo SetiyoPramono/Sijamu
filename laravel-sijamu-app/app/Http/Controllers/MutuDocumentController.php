@@ -18,6 +18,7 @@ class MutuDocumentController extends Controller
             return [
                 'id' => $doc->id,
                 'prodiId' => $doc->study_program_id,
+                'prodi' => $doc->studyProgram ? $doc->studyProgram->name : 'Unknown',
                 'indicatorId' => $doc->document_indicator_id,
                 'file' => [
                     'name' => $doc->file_name,
@@ -54,11 +55,14 @@ class MutuDocumentController extends Controller
             'file_type' => $file->getMimeType(),
         ]);
 
+        $document->load('studyProgram');
+
         return response()->json([
             'message' => 'Document uploaded successfully',
             'document' => [
                 'id' => $document->id,
                 'prodiId' => $document->study_program_id,
+                'prodi' => $document->studyProgram ? $document->studyProgram->name : 'Unknown',
                 'indicatorId' => $document->document_indicator_id,
                 'file' => [
                     'name' => $document->file_name,

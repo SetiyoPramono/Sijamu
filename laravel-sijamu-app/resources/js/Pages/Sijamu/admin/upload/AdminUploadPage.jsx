@@ -39,6 +39,12 @@ export default function AdminUploadPage() {
   const [categorySearch, setCategorySearch]       = useState('');
   const categoryInputRef = useRef(null);
 
+  const [showCriteriaModal, setShowCriteriaModal] = useState(false);
+  const [activeCriteriaDoc, setActiveCriteriaDoc] = useState(null);
+  const [criteriaForm, setCriteriaForm] = useState({ id: '', label: '', bobot: '', kriteria: '' });
+  const [criteriaEditing, setCriteriaEditing] = useState(false);
+  const criteriaLabelRef = useRef(null);
+
   useEffect(() => { if (showProdiModal) setTimeout(() => prodiInputRef.current?.focus(), 50); }, [showProdiModal]);
   useEffect(() => { if (showDocModal)   setTimeout(() => docInputRef.current?.focus(),   50); }, [showDocModal]);
   useEffect(() => { if (showCategoryModal) setTimeout(() => categoryInputRef.current?.focus(), 50); }, [showCategoryModal]);
@@ -181,6 +187,67 @@ export default function AdminUploadPage() {
     }
   };
 
+  const openCriteria = (doc) => {
+    setActiveCriteriaDoc(doc);
+    setCriteriaForm({ id: '', label: '', bobot: '', kriteria: '' });
+    setCriteriaEditing(false);
+    setShowCriteriaModal(true);
+  };
+
+  const handleCriteriaSubmit = async (e) => {
+    e.preventDefault();
+    if (!criteriaForm.label.trim()) { addToast('Label kriteria tidak boleh kosong.', 'warning'); return; }
+    try {
+      const payload = {
+        label: criteriaForm.label,
+        bobot: criteriaForm.bobot === '' ? null : parseInt(criteriaForm.bobot),
+        kriteria: criteriaForm.kriteria
+      };
+
+      if (criteriaEditing) {
+        const res = await axios.put(`/admin/api/docs/${activeCriteriaDoc.id}/criteria/${criteriaForm.id}`, payload);
+        setDocList(prev => prev.map(d => {
+          if (d.id === activeCriteriaDoc.id) {
+            return { ...d, criteria: d.criteria.map(c => c.id === res.data.id ? res.data : c) };
+          }
+          return d;
+        }));
+        setActiveCriteriaDoc(prev => ({...prev, criteria: prev.criteria.map(c => c.id === res.data.id ? res.data : c)}));
+        addToast('Kriteria diperbarui.', 'success');
+      } else {
+        const res = await axios.post(`/admin/api/docs/${activeCriteriaDoc.id}/criteria`, payload);
+        setDocList(prev => prev.map(d => {
+          if (d.id === activeCriteriaDoc.id) {
+            return { ...d, criteria: [...(d.criteria || []), res.data] };
+          }
+          return d;
+        }));
+        setActiveCriteriaDoc(prev => ({...prev, criteria: [...(prev.criteria || []), res.data]}));
+        addToast('Kriteria ditambahkan.', 'success');
+      }
+      setCriteriaEditing(false);
+      setCriteriaForm({ id: '', label: '', bobot: '', kriteria: '' });
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Gagal menyimpan kriteria.', 'error');
+    }
+  };
+
+  const deleteCriteria = async (cId) => {
+    try {
+        await axios.delete(`/admin/api/docs/${activeCriteriaDoc.id}/criteria/${cId}`);
+        setDocList(prev => prev.map(d => {
+          if (d.id === activeCriteriaDoc.id) {
+            return { ...d, criteria: d.criteria.filter(c => c.id !== cId) };
+          }
+          return d;
+        }));
+        setActiveCriteriaDoc(prev => ({...prev, criteria: prev.criteria.filter(c => c.id !== cId)}));
+        addToast('Kriteria dihapus.', 'info');
+    } catch (err) {
+        addToast('Gagal menghapus kriteria.', 'error');
+    }
+  };
+
   return (
     <div className="app-shell">
       <Sidebar />
@@ -319,6 +386,70 @@ export default function AdminUploadPage() {
         onCancel={() => setDeleteCategoryId(null)}
         type="danger"
       />
+
+      {showCriteriaModal && activeCriteriaDoc && (
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowCriteriaModal(false); }} role="dialog" aria-modal="true" aria-labelledby="criteria-modal-title">
+          <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-[800px] max-h-[90vh] overflow-y-auto animate-[scaleIn_0.2s_ease]">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 id="criteria-modal-title" className="text-xl font-bold text-[var(--color-text)]">
+                  Kriteria Penilaian
+                </h2>
+                <p className="text-sm text-[var(--color-text-muted)] mt-1">{activeCriteriaDoc.kode} - {activeCriteriaDoc.nama}</p>
+              </div>
+              <button className="w-9 h-9 rounded-md flex items-center justify-center text-[var(--color-text-muted)] hover:bg-[var(--color-bg)] transition-colors bg-transparent border-none cursor-pointer" onClick={() => setShowCriteriaModal(false)} aria-label="Tutup">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="font-semibold text-[var(--color-text)] mb-3">Daftar Kriteria</h3>
+                {(!activeCriteriaDoc.criteria || activeCriteriaDoc.criteria.length === 0) ? (
+                  <div className="text-sm text-[var(--color-text-muted)] italic">Belum ada kriteria. Sistem akan menggunakan nilai default jika kosong.</div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {activeCriteriaDoc.criteria.sort((a, b) => (a.bobot === null ? -1 : a.bobot) - (b.bobot === null ? -1 : b.bobot)).map(c => (
+                      <div key={c.id} className="p-3 border border-[var(--color-border)] rounded-lg text-sm bg-[var(--color-bg)] flex justify-between items-start">
+                        <div>
+                          <div className="font-bold text-[var(--color-text)]">{c.label} <span className="text-[var(--color-text-muted)] font-normal ml-2">Bobot: {c.bobot !== null ? c.bobot : '-'}</span></div>
+                          <div className="text-[var(--color-text-muted)] mt-1">{c.kriteria || '-'}</div>
+                        </div>
+                        <div className="flex gap-1 shrink-0 ml-3">
+                          <button className="btn btn-sm btn-ghost p-1" onClick={() => {setCriteriaForm({id: c.id, label: c.label, bobot: c.bobot === null ? '' : c.bobot, kriteria: c.kriteria || ''}); setCriteriaEditing(true); criteriaLabelRef.current?.focus();}} aria-label="Edit kriteria">✏️</button>
+                          <button className="btn btn-sm btn-ghost p-1 text-[var(--color-danger)]" onClick={() => deleteCriteria(c.id)} aria-label="Hapus kriteria">❌</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-[var(--color-bg)] p-5 rounded-xl border border-[var(--color-border)] h-fit">
+                <h3 className="font-semibold text-[var(--color-text)] mb-3">{criteriaEditing ? 'Edit Kriteria' : 'Tambah Kriteria Baru'}</h3>
+                <form onSubmit={handleCriteriaSubmit} className="flex flex-col gap-4">
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="crit-label">Label <span className="text-[var(--color-danger)]">*</span></label>
+                    <input ref={criteriaLabelRef} id="crit-label" type="text" className="form-input" placeholder="contoh: Sesuai" value={criteriaForm.label} onChange={e => setCriteriaForm(f => ({...f, label: e.target.value}))} required />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="crit-bobot">Bobot</label>
+                    <input id="crit-bobot" type="number" className="form-input" placeholder="contoh: 3 (kosongkan jika N/A)" value={criteriaForm.bobot} onChange={e => setCriteriaForm(f => ({...f, bobot: e.target.value}))} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="crit-desc">Deskripsi Kriteria</label>
+                    <textarea id="crit-desc" className="form-textarea" placeholder="contoh: Dokumen telah memenuhi standar..." rows={4} value={criteriaForm.kriteria} onChange={e => setCriteriaForm(f => ({...f, kriteria: e.target.value}))} />
+                  </div>
+                  <div className="flex gap-2 justify-end mt-2">
+                    {criteriaEditing && <button type="button" className="btn btn-sm btn-ghost" onClick={() => {setCriteriaEditing(false); setCriteriaForm({id:'', label:'', bobot:'', kriteria:''});}}>Batal</button>}
+                    <button type="submit" className="btn btn-sm btn-primary px-4">{criteriaEditing ? 'Simpan' : 'Tambah'}</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
 
       <main className="main-content">
@@ -547,7 +678,7 @@ export default function AdminUploadPage() {
                         <th scope="col" style={{ width: 90 }}>Kode</th>
                         <th scope="col">Nama Dokumen / Indikator</th>
                         <th scope="col">Panduan Upload</th>
-                        <th scope="col" style={{ width: 150 }}>Aksi</th>
+                        <th scope="col" style={{ width: 220 }}>Aksi</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -565,6 +696,9 @@ export default function AdminUploadPage() {
                           </td>
                           <td>
                             <div className="flex gap-2">
+                              <button className="btn btn-sm btn-outline" onClick={() => openCriteria(doc)} aria-label={'Kriteria ' + doc.kode}>
+                                Kriteria
+                              </button>
                               <button className="btn btn-sm btn-outline" onClick={() => openEditDoc(doc)} aria-label={'Edit ' + doc.kode}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                 Edit

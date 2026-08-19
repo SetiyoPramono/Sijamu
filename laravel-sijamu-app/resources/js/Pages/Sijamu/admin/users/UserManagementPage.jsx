@@ -8,6 +8,7 @@ import ConfirmModal from '@/components/ConfirmModal';
 import { ToastContainer, addToast } from '@/components/Toast';
 import { useAuth } from '@/context/AuthContext';
 import { router } from '@inertiajs/react';
+import { useUploadConfig } from '@/context/UploadConfigContext';
 
 /* ─── Role Mapping ─── */
 const ROLE_MAP = {
@@ -46,10 +47,10 @@ const DEFAULT_PERMISSIONS = {
 };
 
 const EMPTY_FORM = { nama: '', nip: '', email: '', role: 'taskforce', prodi: '', status: 'aktif', password: '' };
-const PRODI_LIST = ['Teknik Informatika', 'Pendidikan Matematika', 'Manajemen', 'Pendidikan Bahasa Inggris', 'Akuntansi', 'Pendidikan IPA', 'Hukum', 'Fakultas Ekonomi', ''];
 
 export default function UserManagementPage({ serverUsers, serverPermissions }) {
   const { user } = useAuth();
+  const { prodiList } = useUploadConfig();
   const [users, setUsers] = useState(serverUsers || []);
   
   // Merge server permissions with default permissions
@@ -236,7 +237,10 @@ export default function UserManagementPage({ serverUsers, serverPermissions }) {
                 </div>
                 <div className="form-group">
                   <label className="form-label" htmlFor="u-prodi">Program Studi</label>
-                  <select id="u-prodi" className="form-select" value={form.prodi} onChange={e => setForm(f => ({...f, prodi: e.target.value}))}>{PRODI_LIST.map(p => <option key={p} value={p}>{p}</option>)}</select>
+                  <select id="u-prodi" className="form-select" value={form.prodi} onChange={e => setForm(f => ({...f, prodi: e.target.value}))}>
+                    <option value="">(Tidak Ada / Semua Prodi)</option>
+                    {prodiList.map(p => <option key={p.id} value={p.nama}>{p.nama}</option>)}
+                  </select>
                 </div>
                 <div className="form-group">
                   <label className="form-label" htmlFor="u-status">Status Akun</label>

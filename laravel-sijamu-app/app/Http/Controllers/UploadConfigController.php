@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\StudyProgram;
 use App\Models\DocumentIndicator;
 use App\Models\DocumentCategory;
+use App\Models\DocumentIndicatorCriteria;
 
 class UploadConfigController extends Controller
 {
@@ -68,7 +69,7 @@ class UploadConfigController extends Controller
 
     public function getDocs()
     {
-        return response()->json(DocumentIndicator::with('category')->get());
+        return response()->json(DocumentIndicator::with(['category', 'criteria'])->get());
     }
 
     public function storeDoc(Request $request)
@@ -101,6 +102,38 @@ class UploadConfigController extends Controller
     public function destroyDoc($id)
     {
         DocumentIndicator::findOrFail($id)->delete();
+        return response()->json(['message' => 'Deleted']);
+    }
+
+    public function storeCriteria(Request $request, $docId)
+    {
+        $request->validate([
+            'label' => 'required|string',
+            'bobot' => 'nullable|integer',
+            'kriteria' => 'nullable|string'
+        ]);
+
+        $doc = DocumentIndicator::findOrFail($docId);
+        $criteria = $doc->criteria()->create($request->only(['label', 'bobot', 'kriteria']));
+        return response()->json($criteria);
+    }
+
+    public function updateCriteria(Request $request, $docId, $id)
+    {
+        $request->validate([
+            'label' => 'required|string',
+            'bobot' => 'nullable|integer',
+            'kriteria' => 'nullable|string'
+        ]);
+
+        $criteria = DocumentIndicatorCriteria::where('document_indicator_id', $docId)->findOrFail($id);
+        $criteria->update($request->only(['label', 'bobot', 'kriteria']));
+        return response()->json($criteria);
+    }
+
+    public function destroyCriteria($docId, $id)
+    {
+        DocumentIndicatorCriteria::where('document_indicator_id', $docId)->findOrFail($id)->delete();
         return response()->json(['message' => 'Deleted']);
     }
 }

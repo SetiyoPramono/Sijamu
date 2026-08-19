@@ -91,6 +91,10 @@ Route::middleware('auth')->group(function () {
             Route::put('/api/docs/{id}', [\App\Http\Controllers\UploadConfigController::class, 'updateDoc']);
             Route::delete('/api/docs/{id}', [\App\Http\Controllers\UploadConfigController::class, 'destroyDoc']);
 
+            Route::post('/api/docs/{docId}/criteria', [\App\Http\Controllers\UploadConfigController::class, 'storeCriteria']);
+            Route::put('/api/docs/{docId}/criteria/{id}', [\App\Http\Controllers\UploadConfigController::class, 'updateCriteria']);
+            Route::delete('/api/docs/{docId}/criteria/{id}', [\App\Http\Controllers\UploadConfigController::class, 'destroyCriteria']);
+
             Route::post('/api/courses', [\App\Http\Controllers\CourseController::class, 'store']);
             Route::put('/api/courses/{id}', [\App\Http\Controllers\CourseController::class, 'update']);
             Route::delete('/api/courses/{id}', [\App\Http\Controllers\CourseController::class, 'destroy']);
