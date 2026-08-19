@@ -76,7 +76,13 @@ Route::middleware('auth')->group(function () {
         // Course API endpoints
         Route::get('/api/courses', [\App\Http\Controllers\CourseController::class, 'index']);
 
+        Route::get('/api/categories', [\App\Http\Controllers\UploadConfigController::class, 'getCategories']);
+
         Route::middleware('permission:manage_upload')->group(function() {
+            Route::post('/api/categories', [\App\Http\Controllers\UploadConfigController::class, 'storeCategory']);
+            Route::put('/api/categories/{id}', [\App\Http\Controllers\UploadConfigController::class, 'updateCategory']);
+            Route::delete('/api/categories/{id}', [\App\Http\Controllers\UploadConfigController::class, 'destroyCategory']);
+
             Route::post('/api/prodis', [\App\Http\Controllers\UploadConfigController::class, 'storeProdi']);
             Route::put('/api/prodis/{id}', [\App\Http\Controllers\UploadConfigController::class, 'updateProdi']);
             Route::delete('/api/prodis/{id}', [\App\Http\Controllers\UploadConfigController::class, 'destroyProdi']);

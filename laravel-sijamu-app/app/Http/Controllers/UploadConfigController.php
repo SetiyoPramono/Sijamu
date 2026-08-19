@@ -5,9 +5,41 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\StudyProgram;
 use App\Models\DocumentIndicator;
+use App\Models\DocumentCategory;
 
 class UploadConfigController extends Controller
 {
+    public function getCategories()
+    {
+        return response()->json(DocumentCategory::all());
+    }
+
+    public function storeCategory(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|unique:document_categories,name',
+            'description' => 'nullable|string'
+        ]);
+        $category = DocumentCategory::create($request->only(['name', 'description']));
+        return response()->json($category);
+    }
+
+    public function updateCategory(Request $request, $id)
+    {
+        $request->validate([
+            'name' => 'required|string|unique:document_categories,name,'.$id,
+            'description' => 'nullable|string'
+        ]);
+        $category = DocumentCategory::findOrFail($id);
+        $category->update($request->only(['name', 'description']));
+        return response()->json($category);
+    }
+
+    public function destroyCategory($id)
+    {
+        DocumentCategory::findOrFail($id)->delete();
+        return response()->json(['message' => 'Deleted']);
+    }
     public function getProdis()
     {
         return response()->json(StudyProgram::all());
@@ -36,7 +68,7 @@ class UploadConfigController extends Controller
 
     public function getDocs()
     {
-        return response()->json(DocumentIndicator::all());
+        return response()->json(DocumentIndicator::with('category')->get());
     }
 
     public function storeDoc(Request $request)
@@ -44,9 +76,11 @@ class UploadConfigController extends Controller
         $request->validate([
             'kode' => 'required|string|unique:document_indicators,kode',
             'nama' => 'required|string',
-            'help' => 'nullable|string'
+            'help' => 'nullable|string',
+            'document_category_id' => 'nullable|exists:document_categories,id'
         ]);
-        $doc = DocumentIndicator::create($request->only(['kode', 'nama', 'help']));
+        $doc = DocumentIndicator::create($request->only(['kode', 'nama', 'help', 'document_category_id']));
+        $doc->load('category');
         return response()->json($doc);
     }
 
@@ -55,10 +89,12 @@ class UploadConfigController extends Controller
         $request->validate([
             'kode' => 'required|string|unique:document_indicators,kode,'.$id,
             'nama' => 'required|string',
-            'help' => 'nullable|string'
+            'help' => 'nullable|string',
+            'document_category_id' => 'nullable|exists:document_categories,id'
         ]);
         $doc = DocumentIndicator::findOrFail($id);
-        $doc->update($request->only(['kode', 'nama', 'help']));
+        $doc->update($request->only(['kode', 'nama', 'help', 'document_category_id']));
+        $doc->load('category');
         return response()->json($doc);
     }
 

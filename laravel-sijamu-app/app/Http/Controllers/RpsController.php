@@ -28,6 +28,8 @@ class RpsController extends Controller
         $doc = RpsDocument::create([
             'course_id'   => $courseId,
             'user_id'     => auth()->id(),
+            'file_name'   => $file->getClientOriginalName(),
+            'file_size'   => $file->getSize(),
             'file_path'   => $path,
             'status'      => 'pending',
             'upload_date' => now()->toDateString(),

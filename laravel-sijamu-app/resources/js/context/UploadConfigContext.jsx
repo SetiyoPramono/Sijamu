@@ -8,17 +8,18 @@ const UploadConfigContext = createContext(null);
 export function UploadConfigProvider({ children }) {
   const [prodiList, setProdiList] = useState([]);
   const [docList, setDocList] = useState([]);
+  const [categoryList, setCategoryList] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [prodiRes, docRes] = await Promise.all([
+        const [prodiRes, docRes, catRes] = await Promise.all([
           axios.get('/admin/api/prodis'),
-          axios.get('/admin/api/docs')
+          axios.get('/admin/api/docs'),
+          axios.get('/admin/api/categories')
         ]);
         
-        // Map data from database, aligning field names with existing frontend expectation
         const mappedProdis = prodiRes.data.map(p => ({
           id: p.id,
           nama: p.name
@@ -26,6 +27,7 @@ export function UploadConfigProvider({ children }) {
         
         setProdiList(mappedProdis);
         setDocList(docRes.data);
+        setCategoryList(catRes.data);
       } catch (err) {
         console.error("Gagal mengambil konfigurasi upload", err);
       } finally {
@@ -36,7 +38,7 @@ export function UploadConfigProvider({ children }) {
   }, []);
 
   return (
-    <UploadConfigContext.Provider value={{ prodiList, setProdiList, docList, setDocList, loading }}>
+    <UploadConfigContext.Provider value={{ prodiList, setProdiList, docList, setDocList, categoryList, setCategoryList, loading }}>
       {children}
     </UploadConfigContext.Provider>
   );

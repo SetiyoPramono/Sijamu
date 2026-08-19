@@ -10,10 +10,11 @@ import { useUploadConfig } from '@/context/UploadConfigContext';
 import axios from 'axios';
 
 const emptyProdiForm = { id: '', nama: '' };
-const emptyDocForm   = { id: '', kode: '', nama: '', help: '' };
+const emptyDocForm   = { id: '', kode: '', nama: '', help: '', document_category_id: '' };
+const emptyCategoryForm = { id: '', name: '', description: '' };
 
 export default function AdminUploadPage() {
-  const { prodiList, setProdiList, docList, setDocList, loading } = useUploadConfig();
+  const { prodiList, setProdiList, docList, setDocList, categoryList, setCategoryList, loading } = useUploadConfig();
 
   const [activeTab, setActiveTab] = useState('prodi');
 
@@ -31,9 +32,16 @@ export default function AdminUploadPage() {
   const [docSearch, setDocSearch]       = useState('');
   const [docFilter, setDocFilter]       = useState('');
   const docInputRef = useRef(null);
+  const [categoryForm, setCategoryForm]           = useState(emptyCategoryForm);
+  const [categoryEditing, setCategoryEditing]     = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [deleteCategoryId, setDeleteCategoryId]   = useState(null);
+  const [categorySearch, setCategorySearch]       = useState('');
+  const categoryInputRef = useRef(null);
 
   useEffect(() => { if (showProdiModal) setTimeout(() => prodiInputRef.current?.focus(), 50); }, [showProdiModal]);
   useEffect(() => { if (showDocModal)   setTimeout(() => docInputRef.current?.focus(),   50); }, [showDocModal]);
+  useEffect(() => { if (showCategoryModal) setTimeout(() => categoryInputRef.current?.focus(), 50); }, [showCategoryModal]);
 
   const filteredProdis = prodiList.filter(p => p.nama.toLowerCase().includes(prodiSearch.toLowerCase()));
 
@@ -79,10 +87,53 @@ export default function AdminUploadPage() {
     }
   };
 
-  const prefixes = [...new Set(docList.map(d => d.kode.split('.')[0]))].sort();
+  const filteredCategories = categoryList.filter(c => c.name.toLowerCase().includes(categorySearch.toLowerCase()));
+
+  const openAddCategory = () => { setCategoryForm(emptyCategoryForm); setCategoryEditing(false); setShowCategoryModal(true); };
+  const openEditCategory = (c) => { setCategoryForm({ ...c }); setCategoryEditing(true); setShowCategoryModal(true); };
+
+  const handleCategorySubmit = async (e) => {
+    e.preventDefault();
+    const name = categoryForm.name.trim();
+    const description = categoryForm.description?.trim() || '';
+    if (!name) { addToast('Nama kategori tidak boleh kosong.', 'warning'); return; }
+    
+    if (!categoryEditing && categoryList.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+      addToast('Kategori dengan nama tersebut sudah ada.', 'warning'); return;
+    }
+
+    try {
+      if (categoryEditing) {
+        const res = await axios.put(`/admin/api/categories/${categoryForm.id}`, { name, description });
+        setCategoryList(prev => prev.map(c => c.id === categoryForm.id ? res.data : c));
+        addToast('Kategori berhasil diperbarui.', 'success');
+      } else {
+        const res = await axios.post('/admin/api/categories', { name, description });
+        setCategoryList(prev => [...prev, res.data]);
+        addToast('Kategori berhasil ditambahkan.', 'success');
+      }
+      setShowCategoryModal(false);
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Gagal menyimpan kategori.', 'error');
+    }
+  };
+
+  const confirmDeleteCategory = async () => {
+    const name = categoryList.find(c => c.id === deleteCategoryId)?.name || '';
+    try {
+      await axios.delete(`/admin/api/categories/${deleteCategoryId}`);
+      setCategoryList(prev => prev.filter(c => c.id !== deleteCategoryId));
+      addToast('Kategori "' + name + '" telah dihapus.', 'info');
+    } catch (err) {
+      addToast('Gagal menghapus kategori.', 'error');
+    } finally {
+      setDeleteCategoryId(null);
+    }
+  };
+
   const filteredDocs = docList.filter(d => {
     const matchSearch = d.nama.toLowerCase().includes(docSearch.toLowerCase()) || d.kode.toLowerCase().includes(docSearch.toLowerCase());
-    const matchFilter = docFilter ? d.kode.startsWith(docFilter + '.') || d.kode === docFilter : true;
+    const matchFilter = docFilter ? String(d.document_category_id) === String(docFilter) : true;
     return matchSearch && matchFilter;
   });
 
@@ -94,6 +145,7 @@ export default function AdminUploadPage() {
     const kode = docForm.kode.trim();
     const nama = docForm.nama.trim();
     const help = docForm.help.trim();
+    const document_category_id = docForm.document_category_id || null;
     if (!kode || !nama) { addToast('Kode dan nama dokumen wajib diisi.', 'warning'); return; }
     
     if (!docEditing && docList.some(d => d.kode.toLowerCase() === kode.toLowerCase())) {
@@ -102,11 +154,11 @@ export default function AdminUploadPage() {
 
     try {
       if (docEditing) {
-        const res = await axios.put(`/admin/api/docs/${docForm.id}`, { kode, nama, help });
+        const res = await axios.put(`/admin/api/docs/${docForm.id}`, { kode, nama, help, document_category_id });
         setDocList(prev => prev.map(d => d.id === docForm.id ? res.data : d));
         addToast('Indikator dokumen berhasil diperbarui.', 'success');
       } else {
-        const res = await axios.post('/admin/api/docs', { kode, nama, help });
+        const res = await axios.post('/admin/api/docs', { kode, nama, help, document_category_id });
         setDocList(prev => [...prev, res.data]);
         addToast('Dokumen ' + kode + ' berhasil ditambahkan.', 'success');
       }
@@ -133,6 +185,36 @@ export default function AdminUploadPage() {
     <div className="app-shell">
       <Sidebar />
       <ToastContainer />
+
+      {showCategoryModal && (
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowCategoryModal(false); }} role="dialog" aria-modal="true" aria-labelledby="category-modal-title">
+          <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-[440px] animate-[scaleIn_0.2s_ease]">
+            <div className="flex items-center justify-between mb-6">
+              <h2 id="category-modal-title" className="text-xl font-bold text-[var(--color-text)]">
+                {categoryEditing ? 'Edit Kategori Dokumen' : 'Tambah Kategori Dokumen'}
+              </h2>
+              <button className="w-9 h-9 rounded-md flex items-center justify-center text-[var(--color-text-muted)] hover:bg-[var(--color-bg)] transition-colors bg-transparent border-none cursor-pointer" onClick={() => setShowCategoryModal(false)} aria-label="Tutup">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <form onSubmit={handleCategorySubmit} className="flex flex-col gap-4">
+              <div className="form-group">
+                <label className="form-label" htmlFor="category-name-input">Nama Kategori <span className="text-[var(--color-danger)]">*</span></label>
+                <input ref={categoryInputRef} id="category-name-input" type="text" className="form-input" placeholder="contoh: Standar Pendidikan" value={categoryForm.name} onChange={e => setCategoryForm(f => ({ ...f, name: e.target.value }))} required />
+              </div>
+              <div className="form-group">
+                <label className="form-label" htmlFor="category-desc-input">Keterangan</label>
+                <textarea id="category-desc-input" className="form-textarea" placeholder="Opsional..." value={categoryForm.description} onChange={e => setCategoryForm(f => ({ ...f, description: e.target.value }))} rows={2} />
+              </div>
+              <div className="flex gap-3 justify-end mt-2">
+                <button type="button" className="btn btn-ghost" onClick={() => setShowCategoryModal(false)}>Batal</button>
+                <button type="submit" className="btn btn-primary">{categoryEditing ? 'Simpan Perubahan' : 'Tambah Kategori'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
 
       {showProdiModal && (
         <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowProdiModal(false); }} role="dialog" aria-modal="true" aria-labelledby="prodi-modal-title">
@@ -182,6 +264,13 @@ export default function AdminUploadPage() {
                 </div>
               </div>
               <div className="form-group">
+                <label className="form-label" htmlFor="doc-category-input">Kategori</label>
+                <select id="doc-category-input" className="form-input" value={docForm.document_category_id || ''} onChange={e => setDocForm(f => ({ ...f, document_category_id: e.target.value }))}>
+                  <option value="">-- Pilih Kategori (Opsional) --</option>
+                  {categoryList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
                 <label className="form-label" htmlFor="doc-help-input">
                   Panduan Upload
                   <span className="text-xs font-normal text-[var(--color-text-muted)] ml-2">(Opsional)</span>
@@ -219,6 +308,19 @@ export default function AdminUploadPage() {
         type="danger"
       />
 
+      
+      <ConfirmModal
+        isOpen={!!deleteCategoryId}
+        title="Hapus Kategori?"
+        message={'Menghapus kategori "' + (categoryList.find(c => c.id === deleteCategoryId)?.name || '') + '" tidak akan menghapus dokumen di dalamnya, tapi akan melepaskan tautan kategorinya.'}
+        confirmLabel="Ya, Hapus"
+        cancelLabel="Batal"
+        onConfirm={confirmDeleteCategory}
+        onCancel={() => setDeleteCategoryId(null)}
+        type="danger"
+      />
+
+
       <main className="main-content">
         <div className="page-wrapper">
           <Breadcrumb items={[
@@ -238,7 +340,7 @@ export default function AdminUploadPage() {
             {[
               { label: 'Total Program Studi', value: prodiList.length, icon: '🏛️' },
               { label: 'Total Dokumen Wajib', value: docList.length, icon: '📄' },
-              { label: 'Kategori Dokumen', value: prefixes.length, icon: '🗂️' },
+              { label: 'Kategori Dokumen', value: categoryList.length, icon: '🗂️' },
               { label: 'Dokumen per Prodi', value: docList.length, icon: '📊' },
             ].map((s, i) => (
               <div key={i} className="card !p-4 flex items-center gap-4">
@@ -254,6 +356,7 @@ export default function AdminUploadPage() {
           <div className="flex gap-1 bg-[var(--color-bg)] p-1 rounded-lg mb-6 w-fit border border-[var(--color-border)]" role="tablist">
             {[
               { id: 'prodi',   label: 'Program Studi', count: prodiList.length },
+              { id: 'kategori', label: 'Kategori Dokumen', count: categoryList.length },
               { id: 'dokumen', label: 'Dokumen Wajib',  count: docList.length },
             ].map(tab => (
               <button
@@ -346,6 +449,69 @@ export default function AdminUploadPage() {
             </div>
           )}
 
+
+          {!loading && activeTab === 'kategori' && (
+            <div className="card animate-[fadeIn_0.3s_ease]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                <h2 className="card-title !mb-0">Daftar Kategori Dokumen</h2>
+                <div className="flex gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 bg-[var(--color-bg)] border border-[var(--color-border)] rounded-lg px-3 focus-within:border-[var(--color-primary)] focus-within:shadow-[0_0_0_3px_var(--color-primary-light)] transition-all">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--color-text-muted)] shrink-0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" className="bg-transparent border-none outline-none py-2 text-sm text-[var(--color-text)] w-[180px] placeholder:text-[var(--color-text-muted)]" placeholder="Cari kategori..." value={categorySearch} onChange={e => setCategorySearch(e.target.value)} aria-label="Cari kategori" />
+                  </div>
+                  <button className="btn btn-primary" onClick={openAddCategory}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Tambah Kategori
+                  </button>
+                </div>
+              </div>
+
+              {filteredCategories.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 gap-3 text-[var(--color-text-muted)]">
+                  <div className="text-5xl">🗂️</div>
+                  <p className="font-semibold">{categorySearch ? 'Kategori tidak ditemukan.' : 'Belum ada kategori dokumen.'}</p>
+                  {!categorySearch && <button className="btn btn-primary mt-2" onClick={openAddCategory}>+ Tambah Kategori Pertama</button>}
+                </div>
+              ) : (
+                <div className="table-wrapper">
+                  <table className="data-table" aria-label="Daftar kategori">
+                    <thead>
+                      <tr>
+                        <th scope="col" style={{ width: 50 }}>No</th>
+                        <th scope="col">Nama Kategori</th>
+                        <th scope="col">Keterangan</th>
+                        <th scope="col" style={{ width: 150 }}>Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredCategories.map((cat, idx) => (
+                        <tr key={cat.id}>
+                          <td className="text-[var(--color-text-muted)]">{idx + 1}</td>
+                          <td>
+                            <span className="font-semibold text-[var(--color-text)]">{cat.name}</span>
+                          </td>
+                          <td>
+                            <span className="text-sm text-[var(--color-text-muted)]">{cat.description || '-'}</span>
+                          </td>
+                          <td>
+                            <div className="flex gap-2">
+                              <button className="btn btn-sm btn-outline" onClick={() => openEditCategory(cat)}>
+                                Edit
+                              </button>
+                              <button className="btn btn-sm btn-danger" onClick={() => setDeleteCategoryId(cat.id)}>
+                                Hapus
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
           {!loading && activeTab === 'dokumen' && (
             <div className="card">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
@@ -357,7 +523,7 @@ export default function AdminUploadPage() {
                   </div>
                   <select className="h-10 px-3 border border-[var(--color-border)] rounded-lg bg-white text-sm text-[var(--color-text)] cursor-pointer focus:outline-none focus:border-[var(--color-primary)]" value={docFilter} onChange={e => setDocFilter(e.target.value)}>
                     <option value="">Semua Kategori</option>
-                    {prefixes.map(p => <option key={p} value={p}>Kategori {p}</option>)}
+                    {categoryList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                   <button className="btn btn-primary" onClick={openAddDoc}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -391,7 +557,7 @@ export default function AdminUploadPage() {
                           <td>
                             <span className="font-mono text-xs font-bold bg-[var(--color-primary-light)] text-[var(--color-primary)] px-2 py-1 rounded">{doc.kode}</span>
                           </td>
-                          <td><span className="font-semibold text-[var(--color-text)]">{doc.nama}</span></td>
+                          <td><span className="font-semibold text-[var(--color-text)]">{doc.nama}</span><div className="text-xs text-[var(--color-text-muted)] mt-1">{doc.category?.name || '<Tanpa Kategori>'}</div></td>
                           <td>
                             <span className="text-sm text-[var(--color-text-muted)] line-clamp-2" title={doc.help}>
                               {doc.help || <em className="italic text-[var(--color-text-light)]">—</em>}

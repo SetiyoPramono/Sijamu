@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class RpsDocument extends Model
 {
-    protected $fillable = ['course_id', 'user_id', 'file_path', 'status', 'upload_date'];
+    protected $fillable = ['course_id', 'user_id', 'file_name', 'file_size', 'file_path', 'status', 'upload_date'];
 
     public function course()
     {

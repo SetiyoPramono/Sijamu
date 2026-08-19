@@ -27,8 +27,8 @@ class CourseController extends Controller
                 'rpsFiles' => $course->rpsDocuments->map(function ($doc) {
                     return [
                         'id'         => $doc->id,
-                        'name'       => basename($doc->file_path),
-                        'size'       => 0, // Actual size not stored in DB
+                        'name'       => $doc->file_name ?? basename($doc->file_path),
+                        'size'       => $doc->file_size ?? 0,
                         'url'        => Storage::url($doc->file_path),
                         'uploadedAt' => $doc->created_at->toISOString(),
                         'status'     => $doc->status,

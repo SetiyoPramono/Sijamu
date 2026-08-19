@@ -16,7 +16,7 @@ const STEPS = ['Pilih Prodi', 'Unggah Dokumen', 'Selesai'];
 export default function UploadPage() {
   const { mutuDocs, addMutuDoc, deleteMutuDoc } = useMutu();
   const { docEvaluations } = useEvaluation();
-  const { prodiList, docList } = useUploadConfig();
+  const { prodiList, docList, categoryList } = useUploadConfig();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedProdi, setSelectedProdi] = useState('');
@@ -373,7 +373,11 @@ export default function UploadPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {indicators.map((ind, i) => (
+                      {indicators.map((ind, i) => {
+                        const originalDoc = docList.find(d => d.id === ind.id);
+                        const cat = categoryList.find(c => c.id == originalDoc?.document_category_id);
+                        const catName = cat ? cat.name : 'Tanpa Kategori / Lainnya';
+                        return (
                         <tr
                           key={ind.id}
                           className={ind.status === 'done' ? '!bg-[rgba(5,122,85,0.03)]' : '!bg-transparent'}
@@ -384,6 +388,7 @@ export default function UploadPage() {
                           </td>
                           <td>
                             <span className="text-base font-medium">{ind.nama}</span>
+                            <div className="text-xs text-[var(--color-text-muted)] mt-1">{catName}</div>
                           </td>
                           <td>
                             <HelpTooltip title={ind.kode} content={ind.help} />
@@ -468,7 +473,8 @@ export default function UploadPage() {
                             </div>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
