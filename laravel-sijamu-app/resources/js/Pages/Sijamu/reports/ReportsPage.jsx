@@ -1,17 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Breadcrumb from '@/components/Breadcrumb';
 import { ToastContainer, addToast } from '@/components/Toast';
+import axios from 'axios';
 
 const reportTypes = [
   {
     id: 1,
     title: 'Laporan Evaluasi Diri (LED)',
     desc: 'Rekapitulasi lengkap borang dan evaluasi diri per program studi.',
-    format: 'PDF / Word',
-    lastGenerated: '5 Agustus 2026',
+    format: 'PDF',
+    endpoint: '/api/reports/download/led',
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -26,8 +27,8 @@ const reportTypes = [
     id: 2,
     title: 'Laporan Kinerja Program Studi (LKPS)',
     desc: 'Data kuantitatif indikator kinerja utama dan tambahan prodi.',
-    format: 'Excel',
-    lastGenerated: '3 Agustus 2026',
+    format: 'PDF',
+    endpoint: '/api/reports/download/lkps',
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
@@ -41,7 +42,7 @@ const reportTypes = [
     title: 'Rekap Kelengkapan Dokumen',
     desc: 'Status ketersediaan dokumen fisik maupun digital seluruh standar.',
     format: 'PDF',
-    lastGenerated: 'Hari ini',
+    endpoint: '/api/reports/download/kelengkapan',
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
@@ -53,8 +54,8 @@ const reportTypes = [
     id: 4,
     title: 'Laporan Temuan Audit',
     desc: 'Catatan rekomendasi dan ketidaksesuaian dari tim auditor internal.',
-    format: 'PDF / Excel',
-    lastGenerated: 'Bulan lalu',
+    format: 'PDF',
+    endpoint: '/api/reports/download/temuan-audit',
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10"/>
@@ -68,16 +69,33 @@ const reportTypes = [
 export default function ReportsPage() {
   const [selectedProdi, setSelectedProdi] = useState('Semua Prodi');
   const [selectedTahun, setSelectedTahun] = useState('2026');
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const handleDownload = (title) => {
-    addToast(`Menyiapkan unduhan untuk ${title}...`, 'info');
-    setTimeout(() => {
-      addToast(`Unduhan ${title} berhasil dimulai.`, 'success');
-    }, 1500);
+  const fetchLogs = async () => {
+    try {
+      const res = await axios.get('/api/reports/logs');
+      setLogs(res.data);
+    } catch (err) {
+      console.error('Gagal mengambil riwayat laporan', err);
+    }
   };
 
-  const handleGenerate = (title) => {
-    addToast(`Menghasilkan laporan baru untuk ${title}...`, 'info');
+  useEffect(() => {
+    fetchLogs();
+  }, []);
+
+  const handleDownload = (report) => {
+    addToast(`Menyiapkan unduhan untuk ${report.title}...`, 'info');
+    
+    // Trigger download via window location
+    const queryParams = new URLSearchParams({ prodi: selectedProdi, tahun: selectedTahun }).toString();
+    window.open(`${report.endpoint}?${queryParams}`, '_blank');
+    
+    setTimeout(() => {
+      fetchLogs();
+      addToast(`Unduhan ${report.title} berhasil dimulai.`, 'success');
+    }, 1500);
   };
 
   return (
@@ -146,28 +164,15 @@ export default function ReportsPage() {
                     <span className="text-[var(--color-text-light)]">Format Ekspor</span>
                     <span className="font-semibold text-[var(--color-text)]">{report.format}</span>
                   </div>
-                  <div className="flex items-center justify-between text-sm pb-2 border-b border-dashed border-[var(--color-border)]">
-                    <span className="text-[var(--color-text-light)]">Dibuat Terakhir</span>
-                    <span className="font-semibold text-[var(--color-text)]">{report.lastGenerated}</span>
-                  </div>
                 </div>
 
                 <div className="flex gap-2 mt-auto">
                   <button 
                     className="btn btn-primary" 
                     style={{ flex: 1 }}
-                    onClick={() => handleDownload(report.title)}
+                    onClick={() => handleDownload(report)}
                   >
-                    Unduh Terbaru
-                  </button>
-                  <button 
-                    className="btn btn-outline"
-                    onClick={() => handleGenerate(report.title)}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="23 4 23 10 17 10"/>
-                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-                    </svg>
+                    Unduh Laporan
                   </button>
                 </div>
               </div>
@@ -178,7 +183,7 @@ export default function ReportsPage() {
           <div className={`card mt-8`}>
             <div className="flex justify-between items-center mb-4">
               <h2 className="card-title" style={{marginBottom: 0}}>Riwayat Pembuatan Laporan</h2>
-              <button className="btn btn-ghost btn-sm">Lihat Semua</button>
+              <button className="btn btn-ghost btn-sm" onClick={fetchLogs}>Segarkan Riwayat</button>
             </div>
             <div className="table-wrapper">
               <table className="data-table">
@@ -192,27 +197,21 @@ export default function ReportsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td>Hari ini, 10:45</td>
-                    <td>Rekap Kelengkapan Dokumen</td>
-                    <td>Teknik Informatika</td>
-                    <td>Dewi Lestari, S.Kom</td>
-                    <td><span className="badge badge-success">Selesai</span></td>
-                  </tr>
-                  <tr>
-                    <td>5 Ags 2026, 09:12</td>
-                    <td>Laporan Evaluasi Diri (LED)</td>
-                    <td>Pendidikan Matematika</td>
-                    <td>Prof. Siti Rahayu, M.Pd</td>
-                    <td><span className="badge badge-success">Selesai</span></td>
-                  </tr>
-                  <tr>
-                    <td>3 Ags 2026, 14:30</td>
-                    <td>Laporan Kinerja Program Studi (LKPS)</td>
-                    <td>Semua Prodi</td>
-                    <td>Sistem (Otomatis)</td>
-                    <td><span className="badge badge-success">Selesai</span></td>
-                  </tr>
+                  {logs.length === 0 ? (
+                    <tr>
+                      <td colSpan="5" className="text-center py-4 text-gray-500">Belum ada riwayat pembuatan laporan.</td>
+                    </tr>
+                  ) : (
+                    logs.map(log => (
+                      <tr key={log.id}>
+                        <td>{log.waktu}</td>
+                        <td>{log.report_type}</td>
+                        <td>{log.prodi_name}</td>
+                        <td>{log.dibuat_oleh}</td>
+                        <td><span className="badge badge-success">{log.status}</span></td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

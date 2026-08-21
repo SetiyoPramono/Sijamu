@@ -16,34 +16,32 @@ const ROLE_MAP = {
   'auditor': 'Auditor / Asesor',
   'dekan': 'Dekan / Pimpinan',
   'koprodi': 'Koordinator Prodi',
-  'taskforce': 'Staf / Task Force'
+  'taskforce': 'Staf / Task Force',
+  'dosen': 'Dosen / Pengajar'
 };
 const ROLES = Object.keys(ROLE_MAP);
 
 const PERMISSIONS = [
   { key: 'view_dashboard',    label: 'Lihat Dashboard',          group: 'Dashboard' },
   { key: 'view_report',       label: 'Lihat Laporan',            group: 'Dashboard' },
-  { key: 'export_report',     label: 'Ekspor Laporan (PDF)',      group: 'Dashboard' },
   { key: 'start_evaluation',  label: 'Mulai Evaluasi',           group: 'Evaluasi' },
-  { key: 'submit_evaluation', label: 'Kunci & Kirim Evaluasi',   group: 'Evaluasi' },
-  { key: 'edit_evaluation',   label: 'Edit Evaluasi Tersimpan',  group: 'Evaluasi' },
   { key: 'upload_document',   label: 'Unggah Dokumen',           group: 'Dokumen' },
   { key: 'delete_document',   label: 'Hapus Dokumen',            group: 'Dokumen' },
   { key: 'view_document',     label: 'Lihat Dokumen',            group: 'Dokumen' },
   { key: 'view_rps',          label: 'Akses Halaman RPS',        group: 'RPS' },
   { key: 'manage_rps',        label: 'Manajemen Data RPS',       group: 'RPS' },
   { key: 'manage_users',      label: 'Manajemen Pengguna',       group: 'Administrasi' },
-  { key: 'manage_roles',      label: 'Kelola Peran & Izin',      group: 'Administrasi' },
   { key: 'manage_upload',     label: 'Manajemen Upload',         group: 'Administrasi' },
   { key: 'system_settings',   label: 'Pengaturan Sistem',        group: 'Administrasi' },
 ];
 
 const DEFAULT_PERMISSIONS = {
   'admin':        PERMISSIONS.map(p => p.key),
-  'auditor':      ['view_dashboard', 'view_report', 'start_evaluation', 'submit_evaluation', 'edit_evaluation', 'view_document', 'view_rps'],
-  'dekan':        ['view_dashboard', 'view_report', 'export_report', 'view_document', 'view_rps'],
+  'auditor':      ['view_dashboard', 'view_report', 'start_evaluation', 'view_document', 'view_rps'],
+  'dekan':        ['view_dashboard', 'view_report', 'view_document', 'view_rps'],
   'koprodi':      ['view_dashboard', 'view_report', 'upload_document', 'delete_document', 'view_document', 'view_rps', 'manage_rps'],
   'taskforce':    ['upload_document', 'view_document', 'view_rps', 'manage_rps'],
+  'dosen':        ['view_dashboard', 'view_document', 'view_rps'],
 };
 
 const EMPTY_FORM = { nama: '', nip: '', email: '', role: 'taskforce', prodi: '', status: 'aktif', password: '' };
@@ -198,6 +196,7 @@ export default function UserManagementPage({ serverUsers, serverPermissions }) {
     if (role === 'auditor') return 'bg-[#EBF2FF] text-[#1A56DB]';
     if (role === 'dekan') return 'bg-[#DEF7EC] text-[#057A55]';
     if (role === 'koprodi') return 'bg-[#FDF6B2] text-[#92400E]';
+    if (role === 'dosen') return 'bg-[#E1EFFE] text-[#1E429F]';
     return 'bg-[#F3F4F6] text-[#374151]';
   };
 
@@ -336,7 +335,7 @@ export default function UserManagementPage({ serverUsers, serverPermissions }) {
                         <td>{i + 1}</td>
                         <td>
                           <div className="flex items-center gap-3">
-                            <div className="w-[38px] h-[38px] rounded-full flex items-center justify-center font-bold text-base text-white shrink-0 uppercase" aria-hidden="true" style={{ background: u.role === 'admin' ? '#C81E1E' : u.role === 'auditor' ? '#1A56DB' : u.role === 'dekan' ? '#057A55' : u.role === 'koprodi' ? '#C27803' : '#6B7280' }}>{u.nama.split(' ').slice(-1)[0][0]}</div>
+                            <div className="w-[38px] h-[38px] rounded-full flex items-center justify-center font-bold text-base text-white shrink-0 uppercase" aria-hidden="true" style={{ background: u.role === 'admin' ? '#C81E1E' : u.role === 'auditor' ? '#1A56DB' : u.role === 'dekan' ? '#057A55' : u.role === 'koprodi' ? '#C27803' : u.role === 'dosen' ? '#1E429F' : '#6B7280' }}>{u.nama.split(' ').slice(-1)[0][0]}</div>
                             <div>
                               <div className="text-base font-semibold text-gray-900 leading-snug">{u.nama}</div>
                               <div className="text-sm text-gray-500">{u.email}</div>

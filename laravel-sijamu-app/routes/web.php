@@ -37,6 +37,15 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Sijamu/reports/page');
     })->middleware('permission:view_report');
 
+    // Endpoint API untuk Laporan
+    Route::middleware('permission:view_report')->group(function () {
+        Route::get('/api/reports/logs', [\App\Http\Controllers\ReportController::class, 'getLogs']);
+        Route::get('/api/reports/download/led', [\App\Http\Controllers\ReportController::class, 'downloadLed']);
+        Route::get('/api/reports/download/lkps', [\App\Http\Controllers\ReportController::class, 'downloadLkps']);
+        Route::get('/api/reports/download/kelengkapan', [\App\Http\Controllers\ReportController::class, 'downloadKelengkapan']);
+        Route::get('/api/reports/download/temuan-audit', [\App\Http\Controllers\ReportController::class, 'downloadTemuanAudit']);
+    });
+
     Route::prefix('admin')->group(function() {
         Route::get('/rps', function () {
             return Inertia::render('Sijamu/admin/rps/page');
