@@ -9,9 +9,17 @@ export function AuthProvider({ children, initialUser }) {
   const [user, setUser] = useState(initialUser || null);
   const loading = false;
 
-  // Sync state if initialUser changes from Inertia navigation
+  // Sync state whenever Inertia successfully navigates to a new page
   useEffect(() => {
+    // Also sync on initial mount just in case
     setUser(initialUser || null);
+    
+    // Listen to successful Inertia navigations to update user state dynamically
+    const unsubscribe = router.on('success', (event) => {
+      setUser(event.detail.page.props.auth?.user || null);
+    });
+    
+    return () => unsubscribe();
   }, [initialUser]);
 
   /* ── Login ───────────────────────────────────────────────────── */
@@ -19,7 +27,7 @@ export function AuthProvider({ children, initialUser }) {
     return new Promise((resolve, reject) => {
       router.post('/login', { nip, password }, {
         onSuccess: (page) => {
-          setUser(page.props.auth.user);
+          // No need to setUser here manually as useEffect will catch it
           resolve(page.props.auth.user);
         },
         onError: (errors) => {
@@ -32,9 +40,7 @@ export function AuthProvider({ children, initialUser }) {
   /* ── Logout ─────────────────────────────────────────────────── */
   const logout = useCallback(() => {
     router.post('/logout', {}, {
-      onSuccess: () => {
-        setUser(null);
-      }
+      // No need to setUser manually as useEffect will catch it
     });
   }, []);
 

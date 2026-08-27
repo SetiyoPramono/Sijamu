@@ -50,6 +50,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/rps', function () {
             return Inertia::render('Sijamu/admin/rps/page');
         })->middleware('permission:manage_rps');
+
+        Route::middleware('permission:manage_rps')->group(function () {
+            Route::post('/api/courses', [\App\Http\Controllers\CourseController::class, 'store']);
+            Route::put('/api/courses/{id}', [\App\Http\Controllers\CourseController::class, 'update']);
+            Route::delete('/api/courses/{id}', [\App\Http\Controllers\CourseController::class, 'destroy']);
+        });
         
         // Grup route manajemen pengguna dengan middleware permission:manage_users
         Route::middleware('permission:manage_users')->group(function () {
@@ -103,10 +109,6 @@ Route::middleware('auth')->group(function () {
             Route::post('/api/docs/{docId}/criteria', [\App\Http\Controllers\UploadConfigController::class, 'storeCriteria']);
             Route::put('/api/docs/{docId}/criteria/{id}', [\App\Http\Controllers\UploadConfigController::class, 'updateCriteria']);
             Route::delete('/api/docs/{docId}/criteria/{id}', [\App\Http\Controllers\UploadConfigController::class, 'destroyCriteria']);
-
-            Route::post('/api/courses', [\App\Http\Controllers\CourseController::class, 'store']);
-            Route::put('/api/courses/{id}', [\App\Http\Controllers\CourseController::class, 'update']);
-            Route::delete('/api/courses/{id}', [\App\Http\Controllers\CourseController::class, 'destroy']);
         });
 
         // RPS file upload/delete — accessible to all authenticated users (own RPS)
@@ -116,7 +118,7 @@ Route::middleware('auth')->group(function () {
 
     // Mutu Documents API endpoints
     Route::get('/api/mutu-documents', [\App\Http\Controllers\MutuDocumentController::class, 'index']);
-    Route::post('/api/mutu-documents', [\App\Http\Controllers\MutuDocumentController::class, 'store']);
+    Route::post('/api/mutu-documents', [\App\Http\Controllers\MutuDocumentController::class, 'store'])->middleware('permission:upload_document');
     Route::delete('/api/mutu-documents/{id}', [\App\Http\Controllers\MutuDocumentController::class, 'destroy']);
 });
 

@@ -40,11 +40,11 @@ class HandleInertiaRequests extends Middleware
                     $userData['permissions'] = $rolePerm->permissions ?? [];
                 } else {
                     $defaults = [
-                        'auditor' => ['view_dashboard', 'view_report', 'start_evaluation', 'view_document', 'view_rps'],
-                        'dekan' => ['view_dashboard', 'view_report', 'view_document', 'view_rps'],
-                        'koprodi' => ['view_dashboard', 'view_report', 'upload_document', 'delete_document', 'view_document', 'view_rps', 'manage_rps'],
-                        'taskforce' => ['upload_document', 'view_document', 'view_rps', 'manage_rps'],
-                        'dosen' => ['view_dashboard', 'view_document', 'view_rps'],
+                        'auditor' => ['view_dashboard', 'view_report', 'start_evaluation', 'view_rps'],
+                        'dekan' => ['view_dashboard', 'view_report', 'view_rps'],
+                        'koprodi' => ['view_dashboard', 'view_report', 'upload_document', 'view_rps', 'manage_rps'],
+                        'taskforce' => ['upload_document', 'view_rps', 'manage_rps'],
+                        'dosen' => ['view_dashboard', 'view_rps'],
                     ];
                     $userData['permissions'] = $defaults[$user->role] ?? [];
                 }

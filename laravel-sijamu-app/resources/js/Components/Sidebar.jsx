@@ -78,7 +78,6 @@ const navGroups = [
   },
   {
     label: 'Administrasi',
-    requiredPermission: 'manage_users', // grup ini tampil jika punya minimal manage_users
     items: [
       {
         href: '/admin/rps',

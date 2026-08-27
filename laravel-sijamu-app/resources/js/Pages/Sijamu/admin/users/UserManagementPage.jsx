@@ -26,22 +26,20 @@ const PERMISSIONS = [
   { key: 'view_report',       label: 'Lihat Laporan',            group: 'Dashboard' },
   { key: 'start_evaluation',  label: 'Mulai Evaluasi',           group: 'Evaluasi' },
   { key: 'upload_document',   label: 'Unggah Dokumen',           group: 'Dokumen' },
-  { key: 'delete_document',   label: 'Hapus Dokumen',            group: 'Dokumen' },
-  { key: 'view_document',     label: 'Lihat Dokumen',            group: 'Dokumen' },
   { key: 'view_rps',          label: 'Akses Halaman RPS',        group: 'RPS' },
-  { key: 'manage_rps',        label: 'Manajemen Data RPS',       group: 'RPS' },
+  { key: 'manage_rps',        label: 'Manajemen Data RPS',       group: 'Administrasi' },
   { key: 'manage_users',      label: 'Manajemen Pengguna',       group: 'Administrasi' },
-  { key: 'manage_upload',     label: 'Manajemen Upload',         group: 'Administrasi' },
+  { key: 'manage_upload',     label: 'Manajemen Folder Dokumen', group: 'Administrasi' },
   { key: 'system_settings',   label: 'Pengaturan Sistem',        group: 'Administrasi' },
 ];
 
 const DEFAULT_PERMISSIONS = {
   'admin':        PERMISSIONS.map(p => p.key),
-  'auditor':      ['view_dashboard', 'view_report', 'start_evaluation', 'view_document', 'view_rps'],
-  'dekan':        ['view_dashboard', 'view_report', 'view_document', 'view_rps'],
-  'koprodi':      ['view_dashboard', 'view_report', 'upload_document', 'delete_document', 'view_document', 'view_rps', 'manage_rps'],
-  'taskforce':    ['upload_document', 'view_document', 'view_rps', 'manage_rps'],
-  'dosen':        ['view_dashboard', 'view_document', 'view_rps'],
+  'auditor':      ['view_dashboard', 'view_report', 'start_evaluation', 'view_rps'],
+  'dekan':        ['view_dashboard', 'view_report', 'view_rps'],
+  'koprodi':      ['view_dashboard', 'view_report', 'upload_document', 'view_rps', 'manage_rps'],
+  'taskforce':    ['upload_document', 'view_rps', 'manage_rps'],
+  'dosen':        ['view_dashboard', 'view_rps'],
 };
 
 const EMPTY_FORM = { nama: '', nip: '', email: '', role: 'taskforce', prodi: '', status: 'aktif', password: '' };

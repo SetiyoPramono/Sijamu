@@ -33,11 +33,11 @@ class CheckPermission
         } else {
             // Default izin jika belum diatur di database
             $defaults = [
-                'auditor' => ['view_dashboard', 'view_report', 'start_evaluation', 'view_document', 'view_rps'],
-                'dekan' => ['view_dashboard', 'view_report', 'view_document', 'view_rps'],
-                'koprodi' => ['view_dashboard', 'view_report', 'view_document', 'view_rps', 'manage_rps', 'upload_document'],
-                'taskforce' => ['upload_document', 'view_document', 'view_rps', 'manage_rps'],
-                'dosen' => ['view_dashboard', 'view_document', 'view_rps'],
+                'auditor' => ['view_dashboard', 'view_report', 'start_evaluation', 'view_rps'],
+                'dekan' => ['view_dashboard', 'view_report', 'view_rps'],
+                'koprodi' => ['view_dashboard', 'view_report', 'upload_document', 'view_rps', 'manage_rps'],
+                'taskforce' => ['upload_document', 'view_rps', 'manage_rps'],
+                'dosen' => ['view_dashboard', 'view_rps'],
             ];
             $permissions = $defaults[$user->role] ?? [];
         }
