@@ -359,8 +359,8 @@ export default function AuditorPage() {
             />
 
             {/* Page Header */}
-            <div className="page-header flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div>
+            <div className="page-header" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginBottom: '24px' }}>
+              <div style={{ flex: '1 1 300px' }}>
                 <h1 className="page-title text-[#0F172A]">Ruang Evaluasi Dokumen</h1>
                 <p className="page-subtitle text-[#475569]">
                   Evaluasi dan verifikasi dokumen mutu prodi serta RPS mata kuliah aktif.
@@ -374,7 +374,7 @@ export default function AuditorPage() {
               </div>
 
               {/* Progress Summary Card in Header */}
-              <div className="aud-header-prog-card">
+              <div className="aud-header-prog-card" style={{ flex: '0 0 auto', marginRight: '16px' }}>
                 <div>
                   <div className="text-xs text-[#64748B] font-bold uppercase tracking-wider">Progres Audit</div>
                   <div className="text-xl font-black text-[#0F172A]">

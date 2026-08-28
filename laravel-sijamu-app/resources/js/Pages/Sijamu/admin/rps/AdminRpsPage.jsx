@@ -101,23 +101,45 @@ export default function AdminRpsPage() {
           ]} />
 
           {/* ── Page Header ─── */}
-          <div className="page-header flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="page-title">Manajemen RPS</h1>
-              <p className="page-subtitle">Kelola Rencana Pembelajaran Semester untuk seluruh mata kuliah</p>
+          <div className="page-header" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '24px', alignItems: 'flex-start', marginBottom: '24px' }}>
+            <div style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: '16px', alignItems: 'flex-start', textAlign: 'left' }}>
+              <div>
+                <h1 className="page-title">Manajemen RPS</h1>
+                <p className="page-subtitle">Kelola Rencana Pembelajaran Semester untuk seluruh mata kuliah</p>
+              </div>
+              {!showForm && (
+                <button
+                  className="btn btn-primary"
+                  onClick={() => { setShowForm(true); setIsEditing(false); setFormData(emptyForm); }}
+                  aria-label="Tambah mata kuliah baru"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Tambah Mata Kuliah
+                </button>
+              )}
             </div>
-            {!showForm && (
-              <button
-                className="btn btn-primary"
-                onClick={() => { setShowForm(true); setIsEditing(false); setFormData(emptyForm); }}
-                aria-label="Tambah mata kuliah baru"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-                Tambah Mata Kuliah
-              </button>
-            )}
+
+            {/* ── Summary Stats (Moved to Header Right) ─── */}
+            <div style={{ flex: '0 0 auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+              <div className="card flex flex-col items-center justify-center gap-1 p-4 text-center">
+                <div className="text-3xl font-extrabold text-[var(--color-primary)] leading-none">{courses.length}</div>
+                <div className="text-sm text-[var(--color-text-muted)] font-medium">Total Mata Kuliah</div>
+              </div>
+              <div className="card flex flex-col items-center justify-center gap-1 p-4 text-center">
+                <div className="text-3xl font-extrabold text-[var(--color-primary)] leading-none">{[...new Set(courses.map((c) => c.prodi))].length}</div>
+                <div className="text-sm text-[var(--color-text-muted)] font-medium">Program Studi</div>
+              </div>
+              <div className="card flex flex-col items-center justify-center gap-1 p-4 text-center">
+                <div className="text-3xl font-extrabold text-[var(--color-primary)] leading-none">{courses.filter((c) => c.rpsFiles && c.rpsFiles.length > 0).length}</div>
+                <div className="text-sm text-[var(--color-text-muted)] font-medium">Sudah Upload RPS</div>
+              </div>
+              <div className="card flex flex-col items-center justify-center gap-1 p-4 text-center">
+                <div className="text-3xl font-extrabold text-[var(--color-primary)] leading-none">{courses.reduce((s, c) => s + c.sks, 0)}</div>
+                <div className="text-sm text-[var(--color-text-muted)] font-medium">Total SKS</div>
+              </div>
+            </div>
           </div>
 
           {/* ── Form Card ─── */}
@@ -192,36 +214,19 @@ export default function AdminRpsPage() {
             </div>
           )}
 
-          {/* ── Summary Stats ─── */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="card flex flex-col items-center gap-1 p-5 text-center">
-              <div className="text-3xl font-extrabold text-[var(--color-primary)] leading-none">{courses.length}</div>
-              <div className="text-sm text-[var(--color-text-muted)] font-medium">Total Mata Kuliah</div>
-            </div>
-            <div className="card flex flex-col items-center gap-1 p-5 text-center">
-              <div className="text-3xl font-extrabold text-[var(--color-primary)] leading-none">{[...new Set(courses.map((c) => c.prodi))].length}</div>
-              <div className="text-sm text-[var(--color-text-muted)] font-medium">Program Studi</div>
-            </div>
-            <div className="card flex flex-col items-center gap-1 p-5 text-center">
-              <div className="text-3xl font-extrabold text-[var(--color-primary)] leading-none">{courses.filter((c) => c.rpsFiles && c.rpsFiles.length > 0).length}</div>
-              <div className="text-sm text-[var(--color-text-muted)] font-medium">Sudah Upload RPS</div>
-            </div>
-            <div className="card flex flex-col items-center gap-1 p-5 text-center">
-              <div className="text-3xl font-extrabold text-[var(--color-primary)] leading-none">{courses.reduce((s, c) => s + c.sks, 0)}</div>
-              <div className="text-sm text-[var(--color-text-muted)] font-medium">Total SKS</div>
-            </div>
-          </div>
+
 
           {/* ── Table Card ─── */}
           <div className="card mt-6">
-            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 mb-0">
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px', paddingLeft: '16px', paddingRight: '16px' }}>
               <h2 className="card-title" style={{ marginBottom: 0 }}>Daftar Mata Kuliah</h2>
               <div className="relative flex items-center">
                 <svg className="absolute left-3.5 text-gray-400 pointer-events-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
                 <input
-                  className="py-2.5 pr-4 pl-10 border-2 border-[var(--color-border)] rounded-md font-sans text-sm text-[var(--color-text)] bg-[var(--color-white)] w-full md:w-[280px] transition-all focus:outline-none focus:border-[var(--color-primary)] focus:ring-[3px] focus:ring-[var(--color-primary-light)]"
+                  className="py-2.5 pr-4 pl-10 border-2 border-[var(--color-border)] rounded-md font-sans text-sm text-[var(--color-text)] bg-[var(--color-white)] transition-all focus:outline-none focus:border-[var(--color-primary)] focus:ring-[3px] focus:ring-[var(--color-primary-light)]"
+                  style={{ width: '280px', maxWidth: '100%' }}
                   placeholder="Cari kode, nama, atau prodi..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}

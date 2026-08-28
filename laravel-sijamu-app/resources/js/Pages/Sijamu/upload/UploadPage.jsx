@@ -273,9 +273,23 @@ export default function UploadPage() {
             { label: currentStep === 1 ? 'Pilih Prodi' : prodiList.find(p => p.id == selectedProdi)?.nama, href: '/upload' },
           ]} />
 
-          <div className="page-header">
-            <h1 className="page-title">📁 Unggah Dokumen Bukti</h1>
-            <p className="page-subtitle">Ikuti langkah-langkah berikut untuk mengunggah dokumen akreditasi secara terstruktur</p>
+          <div className="page-header" style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+            <div>
+              <h1 className="page-title">📁 Unggah Dokumen Bukti</h1>
+              <p className="page-subtitle">Ikuti langkah-langkah berikut untuk mengunggah dokumen akreditasi secara terstruktur</p>
+            </div>
+
+            {currentStep === 2 && selectedProdi && (
+              <div className="flex items-center gap-4 bg-white border border-[var(--color-border)] rounded-full px-5 py-2.5 shadow-sm" style={{ marginRight: '40px' }}>
+                <div className="text-right hidden sm:block">
+                  <div className="text-xs text-[var(--color-text-muted)] font-medium">Progres: <strong className="text-[var(--color-text)]">{filledCount}/{totalCount}</strong></div>
+                </div>
+                <div className="w-24 h-2.5 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="h-full bg-[var(--color-primary)] transition-all duration-500 ease-out" style={{ width: `${pct}%` }} />
+                </div>
+                <span className="text-sm font-extrabold text-[var(--color-primary)]">{pct}%</span>
+              </div>
+            )}
           </div>
 
           {/* Wizard steps */}
@@ -340,21 +354,7 @@ export default function UploadPage() {
           {/* Step 2: Checklist Upload */}
           {currentStep === 2 && (
             <div>
-              {/* Progress summary */}
-              <div className={`card`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-lg font-bold text-[var(--color-text)]">{prodiList.find(p => p.id == selectedProdi)?.nama}</div>
-                    <div className="text-base text-[var(--color-text-muted)] mt-1">
-                      <span className="font-extrabold text-[var(--color-primary)] text-xl">{filledCount}</span> dari {totalCount} dokumen diunggah
-                    </div>
-                  </div>
-                  <div className="text-[42px] font-extrabold text-[var(--color-primary)] tracking-[-0.02em]">{pct}%</div>
-                </div>
-                <div className="progress-bar-track" style={{marginTop:'var(--space-3)'}}>
-                  <div className="progress-bar-fill" style={{width:`${pct}%`}} />
-                </div>
-              </div>
+              {/* Progress summary moved to header */}
 
               {/* Checklist Table */}
               <div className={`card mt-4`}>
