@@ -11,12 +11,14 @@ import { ToastContainer, addToast } from '@/components/Toast';
 import { useMutu } from '@/context/MutuContext';
 import { useEvaluation } from '@/context/EvaluationContext';
 import { useUploadConfig } from '@/context/UploadConfigContext';
+import { usePeriod } from '@/context/PeriodContext';
 const STEPS = ['Pilih Prodi', 'Unggah Dokumen', 'Selesai'];
 
 export default function UploadPage() {
   const { mutuDocs, addMutuDoc, deleteMutuDoc } = useMutu();
   const { docEvaluations } = useEvaluation();
   const { prodiList, docList, categoryList } = useUploadConfig();
+  const { activePeriod, isArchive } = usePeriod();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedProdi, setSelectedProdi] = useState('');
@@ -277,6 +279,11 @@ export default function UploadPage() {
             <div>
               <h1 className="page-title">📁 Unggah Dokumen Bukti</h1>
               <p className="page-subtitle">Ikuti langkah-langkah berikut untuk mengunggah dokumen akreditasi secara terstruktur</p>
+              {isArchive && (
+                <div className="mt-3 inline-flex items-center gap-2 px-3 py-2 bg-[var(--color-warning-light)] text-[var(--color-warning)] border border-[rgba(194,120,3,0.3)] rounded-lg text-sm font-bold shadow-sm">
+                  🔒 Mode Arsip: Anda sedang melihat data {activePeriod?.name} {activePeriod?.semester}. Fitur unggah/hapus dinonaktifkan.
+                </div>
+              )}
             </div>
 
             {currentStep === 2 && selectedProdi && (
@@ -442,33 +449,41 @@ export default function UploadPage() {
                                   >
                                     Lihat
                                   </a>
-                                  <button
-                                    className="btn btn-sm btn-outline"
-                                    onClick={() => openModal(ind)}
-                                    aria-label={`Ganti dokumen ${ind.kode}`}
-                                  >
-                                    Ganti
-                                  </button>
-                                  <button
-                                    className="btn btn-sm btn-danger"
-                                    onClick={() => setConfirmDelete(ind.id)}
-                                    aria-label={`Hapus dokumen ${ind.kode}`}
-                                  >
-                                    Hapus
-                                  </button>
+                                  {!isArchive && (
+                                    <>
+                                      <button
+                                        className="btn btn-sm btn-outline"
+                                        onClick={() => openModal(ind)}
+                                        aria-label={`Ganti dokumen ${ind.kode}`}
+                                      >
+                                        Ganti
+                                      </button>
+                                      <button
+                                        className="btn btn-sm btn-danger"
+                                        onClick={() => setConfirmDelete(ind.id)}
+                                        aria-label={`Hapus dokumen ${ind.kode}`}
+                                      >
+                                        Hapus
+                                      </button>
+                                    </>
+                                  )}
                                 </>
                               ) : (
-                                <button
-                                  className={`btn btn-sm btn-primary !font-bold`}
-                                  onClick={() => openModal(ind)}
-                                  aria-label={`Unggah dokumen untuk ${ind.nama}`}
-                                >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                    <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                  </svg>
-                                  ➕ Unggah Bukti
-                                </button>
+                                !isArchive ? (
+                                  <button
+                                    className={`btn btn-sm btn-primary !font-bold`}
+                                    onClick={() => openModal(ind)}
+                                    aria-label={`Unggah dokumen untuk ${ind.nama}`}
+                                  >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                      <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    </svg>
+                                    ➕ Unggah Bukti
+                                  </button>
+                                ) : (
+                                  <span className="text-xs font-semibold text-gray-400 italic">Terkunci (Arsip)</span>
+                                )
                               )}
                             </div>
                           </td>

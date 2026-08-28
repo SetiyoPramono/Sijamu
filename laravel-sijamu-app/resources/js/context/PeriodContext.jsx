@@ -11,17 +11,17 @@ const MOCK_PERIODS = [
 const PeriodContext = createContext(null);
 
 export function PeriodProvider({ children }) {
-  const [periods] = useState(MOCK_PERIODS);
+  const [periods, setPeriods] = useState(MOCK_PERIODS);
   
   // Default ke periode berjalan (isCurrent = true)
-  const currentPeriod = MOCK_PERIODS.find(p => p.isCurrent) || MOCK_PERIODS[0];
-  const [activePeriodId, setActivePeriodId] = useState(currentPeriod.id);
+  const currentPeriod = periods.find(p => p.isCurrent) || periods[0];
+  const [activePeriodId, setActivePeriodId] = useState(currentPeriod?.id);
 
   const activePeriod = periods.find(p => p.id === activePeriodId) || periods[0];
-  const isArchive = !activePeriod.isCurrent;
+  const isArchive = activePeriod ? !activePeriod.isCurrent : false;
 
   return (
-    <PeriodContext.Provider value={{ periods, activePeriod, activePeriodId, setActivePeriodId, isArchive }}>
+    <PeriodContext.Provider value={{ periods, setPeriods, activePeriod, activePeriodId, setActivePeriodId, isArchive }}>
       {children}
     </PeriodContext.Provider>
   );

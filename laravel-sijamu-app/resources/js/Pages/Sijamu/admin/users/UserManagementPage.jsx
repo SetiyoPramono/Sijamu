@@ -30,6 +30,7 @@ const PERMISSIONS = [
   { key: 'manage_rps',        label: 'Manajemen Data RPS',       group: 'Administrasi' },
   { key: 'manage_users',      label: 'Manajemen Pengguna',       group: 'Administrasi' },
   { key: 'manage_upload',     label: 'Manajemen Folder Dokumen', group: 'Administrasi' },
+  { key: 'manage_periods',    label: 'Manajemen Periode Akademik', group: 'Administrasi' },
   { key: 'system_settings',   label: 'Pengaturan Sistem',        group: 'Administrasi' },
 ];
 

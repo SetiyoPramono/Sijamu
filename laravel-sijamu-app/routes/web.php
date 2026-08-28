@@ -47,6 +47,10 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('admin')->group(function() {
+        Route::get('/periods', function () {
+            return Inertia::render('Sijamu/admin/periods/page');
+        })->middleware('permission:manage_periods');
+
         Route::get('/rps', function () {
             return Inertia::render('Sijamu/admin/rps/page');
         })->middleware('permission:manage_rps');
