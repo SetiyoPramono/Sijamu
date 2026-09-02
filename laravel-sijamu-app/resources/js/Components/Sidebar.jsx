@@ -350,15 +350,40 @@ export default function Sidebar() {
               </ul>
             </div>
           ))}
+
+          {/* Pengaturan Akun (Static, bypass permissions) */}
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-bold uppercase tracking-[0.1em] text-[#c8d8f880] px-3 mb-2">Pengaturan Akun</span>
+            <ul className="list-none flex flex-col gap-1 m-0 p-0">
+              <li>
+                <Link
+                  href="/profile"
+                  onClick={() => setIsMobileOpen(false)}
+                  className={`flex items-center gap-3 py-3 px-3 rounded-md text-[var(--sidebar-text)] text-base font-medium transition-colors hover:bg-white/10 hover:text-white relative no-underline ${pathname === '/profile' ? 'bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] font-semibold shadow-[0_4px_12px_rgba(26,86,219,0.35)]' : ''}`}
+                >
+                  <span className="flex items-center justify-center shrink-0 w-[22px]" aria-hidden="true">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                  </span>
+                  <span className="flex-1 whitespace-nowrap overflow-hidden text-ellipsis">Profil Saya</span>
+                  {pathname === '/profile' && <span className="w-1.5 h-1.5 rounded-full bg-white/80 shrink-0" />}
+                </Link>
+              </li>
+            </ul>
+          </div>
         </nav>
 
         {/* User info */}
-        <div className="flex items-center gap-3 p-3 bg-white/10 rounded-md border-t border-white/10 pt-4 mt-auto shrink-0">
-          <div className="w-[38px] h-[38px] bg-[var(--color-primary)] rounded-full flex items-center justify-center font-bold text-white text-base shrink-0" aria-hidden="true">
+        <div className="flex items-center gap-3 p-3 bg-white/10 rounded-md border-t border-white/10 mt-auto shrink-0">
+          <Link href="/profile" className="w-[38px] h-[38px] bg-[var(--color-primary)] rounded-full flex items-center justify-center font-bold text-white text-base shrink-0 hover:ring-2 hover:ring-white/50 transition-all cursor-pointer" aria-hidden="true" title="Profil Saya">
             {user?.name?.[0]?.toUpperCase() ?? '?'}
-          </div>
+          </Link>
           <div className="flex-1 overflow-hidden">
-            <div className="text-sm font-semibold text-white whitespace-nowrap overflow-hidden text-ellipsis">{user?.name ?? 'Pengguna'}</div>
+            <Link href="/profile" className="block text-sm font-semibold text-white whitespace-nowrap overflow-hidden text-ellipsis hover:underline" title="Profil Saya">
+              {user?.name ?? 'Pengguna'}
+            </Link>
             <div className="text-xs text-[var(--sidebar-text)] opacity-75">{ROLE_LABELS[userRole] ?? userRole ?? '—'}</div>
           </div>
           <button

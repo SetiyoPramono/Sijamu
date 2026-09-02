@@ -37,6 +37,11 @@ Route::middleware('auth')->group(function () {
         return Inertia::render('Sijamu/reports/page');
     })->middleware('permission:view_report');
 
+    // Endpoint Profil Mandiri
+    Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [\App\Http\Controllers\ProfileController::class, 'updateIdentity'])->name('profile.update');
+    Route::patch('/profile/password', [\App\Http\Controllers\ProfileController::class, 'updatePassword'])->name('profile.password');
+
     // Endpoint API untuk Laporan
     Route::middleware('permission:view_report')->group(function () {
         Route::get('/api/reports/logs', [\App\Http\Controllers\ReportController::class, 'getLogs']);
