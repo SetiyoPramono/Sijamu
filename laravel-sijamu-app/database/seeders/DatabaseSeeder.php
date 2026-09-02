@@ -19,7 +19,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'MasTyo',
             'email' => 'mastyo@sijamu.com', // Tetap butuh format email atau NIP
             'identity_number' => 'MasTyo',
-            'password' => Hash::make('jackcin123'),
+            'password' => Hash::make('jackcin*'),
             'role' => 'admin',
         ]);
 
