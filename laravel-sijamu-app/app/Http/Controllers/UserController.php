@@ -70,6 +70,16 @@ class UserController extends Controller
             'password' => 'nullable|string|min:8',
         ]);
 
+        // Proteksi self-demotion dan self-lockout
+        if ($user->id === auth()->id()) {
+            if ($validated['role'] !== 'admin') {
+                return redirect()->back()->withErrors(['message' => 'Anda tidak dapat mengubah peran akun Anda sendiri.']);
+            }
+            if ($validated['status'] === 'nonaktif') {
+                return redirect()->back()->withErrors(['message' => 'Anda tidak dapat menonaktifkan akun Anda sendiri.']);
+            }
+        }
+
         $user->name = $validated['nama'];
         $user->identity_number = $validated['nip'];
         $user->email = $validated['email'];

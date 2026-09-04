@@ -7,15 +7,6 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
-Route::get('/debug-user', function () {
-    $user = \App\Models\User::where('role', 'auditor')->first();
-    if (!$user) return 'No auditor user';
-    $userData = $user->toArray();
-    $rolePerm = \App\Models\RolePermission::where('role', $user->role)->first();
-    $userData['permissions'] = $rolePerm ? $rolePerm->permissions : 'No role perm';
-    return response()->json($userData);
-});
-
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', function () {
         return Inertia::render('Sijamu/dashboard/page');
@@ -43,7 +34,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile/password', [\App\Http\Controllers\ProfileController::class, 'updatePassword'])->name('profile.password');
 
     // Endpoint API untuk Laporan
-    Route::middleware('permission:view_report')->group(function () {
+    Route::middleware(['permission:view_report', 'throttle:30,1'])->group(function () {
         Route::get('/api/reports/logs', [\App\Http\Controllers\ReportController::class, 'getLogs']);
         Route::get('/api/reports/download/led', [\App\Http\Controllers\ReportController::class, 'downloadLed']);
         Route::get('/api/reports/download/lkps', [\App\Http\Controllers\ReportController::class, 'downloadLkps']);
@@ -95,7 +86,7 @@ Route::middleware('auth')->group(function () {
         // Users API
         Route::get('/api/users', function() {
             return response()->json(\App\Models\User::select('id', 'name', 'email', 'role')->get());
-        });
+        })->middleware('permission:manage_users,manage_rps');
 
         // Course API endpoints
         Route::get('/api/courses', [\App\Http\Controllers\CourseController::class, 'index']);
@@ -128,7 +119,7 @@ Route::middleware('auth')->group(function () {
     // Mutu Documents API endpoints
     Route::get('/api/mutu-documents', [\App\Http\Controllers\MutuDocumentController::class, 'index']);
     Route::post('/api/mutu-documents', [\App\Http\Controllers\MutuDocumentController::class, 'store'])->middleware('permission:upload_document');
-    Route::delete('/api/mutu-documents/{id}', [\App\Http\Controllers\MutuDocumentController::class, 'destroy']);
+    Route::delete('/api/mutu-documents/{id}', [\App\Http\Controllers\MutuDocumentController::class, 'destroy'])->middleware('permission:upload_document');
 });
 
 require __DIR__.'/auth.php';

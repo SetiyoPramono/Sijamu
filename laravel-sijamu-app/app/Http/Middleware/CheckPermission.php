@@ -13,7 +13,7 @@ class CheckPermission
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next, string $permission): Response
+    public function handle(Request $request, Closure $next, string ...$permissions): Response
     {
         $user = $request->user();
 
@@ -29,7 +29,7 @@ class CheckPermission
         $rolePerm = \App\Models\RolePermission::where('role', $user->role)->first();
         
         if ($rolePerm) {
-            $permissions = $rolePerm->permissions ?? [];
+            $userPermissions = $rolePerm->permissions ?? [];
         } else {
             // Default izin jika belum diatur di database
             $defaults = [
@@ -39,10 +39,18 @@ class CheckPermission
                 'taskforce' => ['upload_document', 'view_rps', 'manage_rps'],
                 'dosen' => ['view_dashboard', 'view_rps'],
             ];
-            $permissions = $defaults[$user->role] ?? [];
+            $userPermissions = $defaults[$user->role] ?? [];
         }
 
-        if (!in_array($permission, $permissions)) {
+        // Flatten jika parameter dipisahkan dengan koma
+        $flatPermissions = [];
+        foreach ($permissions as $p) {
+            foreach (explode(',', $p) as $sub) {
+                $flatPermissions[] = trim($sub);
+            }
+        }
+
+        if (empty(array_intersect($flatPermissions, $userPermissions))) {
             abort(403, 'Anda tidak memiliki izin untuk mengakses halaman ini.');
         }
 

@@ -79,6 +79,12 @@ class MutuDocumentController extends Controller
     public function destroy($id)
     {
         $document = \App\Models\MutuDocument::findOrFail($id);
+        $user = auth()->user();
+
+        // Validasi wewenang hapus: Admin atau pemilik/pengunggah file
+        if ($user->role !== 'admin' && $document->user_id !== $user->id) {
+            return response()->json(['message' => 'Anda tidak memiliki wewenang untuk menghapus dokumen ini.'], 403);
+        }
         
         if (\Illuminate\Support\Facades\Storage::disk('public')->exists($document->file_path)) {
             \Illuminate\Support\Facades\Storage::disk('public')->delete($document->file_path);

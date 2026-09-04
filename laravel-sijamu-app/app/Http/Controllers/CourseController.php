@@ -117,7 +117,16 @@ class CourseController extends Controller
 
     public function destroy($id)
     {
-        Course::findOrFail($id)->delete();
+        $course = Course::with('rpsDocuments')->findOrFail($id);
+
+        // Hapus fisik file RPS terkait dari storage disk
+        foreach ($course->rpsDocuments as $doc) {
+            if ($doc->file_path && Storage::disk('public')->exists($doc->file_path)) {
+                Storage::disk('public')->delete($doc->file_path);
+            }
+        }
+
+        $course->delete();
         return response()->json(['message' => 'Deleted']);
     }
 }

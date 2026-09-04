@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\RpsDocument;
+use App\Models\Course;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -20,6 +21,13 @@ class RpsController extends Controller
 
         $file = $request->file('file');
         $courseId = $request->input('course_id');
+        $course = Course::findOrFail($courseId);
+        $user = auth()->user();
+
+        // Validasi wewenang unggah: Admin, Koprodi, atau Dosen pengampu mata kuliah
+        if ($user->role !== 'admin' && $user->role !== 'koprodi' && $course->user_id !== $user->id) {
+            return response()->json(['message' => 'Anda tidak memiliki hak akses untuk mengunggah RPS pada mata kuliah ini.'], 403);
+        }
 
         // Store the file in storage/app/public/rps/{course_id}/
         $path = $file->store("rps/{$courseId}", 'public');
@@ -27,7 +35,7 @@ class RpsController extends Controller
         // Record the file in the database
         $doc = RpsDocument::create([
             'course_id'   => $courseId,
-            'user_id'     => auth()->id(),
+            'user_id'     => $user->id,
             'file_name'   => $file->getClientOriginalName(),
             'file_size'   => $file->getSize(),
             'file_path'   => $path,
@@ -50,6 +58,12 @@ class RpsController extends Controller
     public function destroy($id)
     {
         $doc = RpsDocument::findOrFail($id);
+        $user = auth()->user();
+
+        // Validasi wewenang hapus: Admin atau pemilik/pengunggah file
+        if ($user->role !== 'admin' && $doc->user_id !== $user->id) {
+            return response()->json(['message' => 'Anda tidak memiliki wewenang untuk menghapus dokumen ini.'], 403);
+        }
 
         // Delete the physical file from storage
         Storage::disk('public')->delete($doc->file_path);

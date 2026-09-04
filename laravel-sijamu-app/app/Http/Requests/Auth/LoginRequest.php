@@ -28,7 +28,8 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nip' => ['required', 'string'],
+            'nip' => ['required_without:email', 'nullable', 'string'],
+            'email' => ['required_without:nip', 'nullable', 'string'],
             'password' => ['required', 'string'],
         ];
     }
@@ -42,21 +43,35 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        $loginField = $this->string('nip')->toString();
+        $loginField = $this->filled('nip') 
+            ? $this->string('nip')->toString() 
+            : $this->string('email')->toString();
         $password = $this->string('password')->toString();
+        $errorKey = $this->filled('nip') ? 'nip' : 'email';
 
-        if (
-            !Auth::attempt(['email' => $loginField, 'password' => $password], $this->boolean('remember')) &&
-            !Auth::attempt(['identity_number' => $loginField, 'password' => $password], $this->boolean('remember'))
-        ) {
-            RateLimiter::hit($this->throttleKey());
+        $user = \App\Models\User::where('email', $loginField)
+            ->orWhere('identity_number', $loginField)
+            ->first();
 
-            throw ValidationException::withMessages([
-                'nip' => trans('auth.failed'),
-            ]);
+        if ($user && \Illuminate\Support\Facades\Hash::check($password, $user->password)) {
+            if ($user->status === 'nonaktif') {
+                RateLimiter::hit($this->throttleKey());
+
+                throw ValidationException::withMessages([
+                    $errorKey => 'Akun Anda telah dinonaktifkan. Silakan hubungi Administrator.',
+                ]);
+            }
+
+            Auth::login($user, $this->boolean('remember'));
+            RateLimiter::clear($this->throttleKey());
+            return;
         }
 
-        RateLimiter::clear($this->throttleKey());
+        RateLimiter::hit($this->throttleKey());
+
+        throw ValidationException::withMessages([
+            $errorKey => trans('auth.failed'),
+        ]);
     }
 
     /**
@@ -73,9 +88,10 @@ class LoginRequest extends FormRequest
         event(new Lockout($this));
 
         $seconds = RateLimiter::availableIn($this->throttleKey());
+        $errorKey = $this->filled('nip') ? 'nip' : 'email';
 
         throw ValidationException::withMessages([
-            'nip' => trans('auth.throttle', [
+            $errorKey => trans('auth.throttle', [
                 'seconds' => $seconds,
                 'minutes' => ceil($seconds / 60),
             ]),
@@ -87,6 +103,7 @@ class LoginRequest extends FormRequest
      */
     public function throttleKey(): string
     {
-        return Str::transliterate(Str::lower($this->input('nip')).'|'.$this->ip());
+        $loginField = $this->filled('nip') ? $this->input('nip') : $this->input('email');
+        return Str::transliterate(Str::lower($loginField).'|'.$this->ip());
     }
 }
