@@ -19,7 +19,7 @@ export function PeriodProvider({ children }) {
         setPeriods(res.data);
         const current = res.data.find(p => p.isCurrent) || res.data[0];
         setActivePeriodId(prev => {
-          const stillExists = res.data.some(p => p.id === prev);
+          const stillExists = res.data.some(p => String(p.id) === String(prev));
           return stillExists ? prev : current.id;
         });
       } else {
@@ -75,7 +75,7 @@ export function PeriodProvider({ children }) {
 
   // Hitung periode aktif yang sedang dipilih di sesi
   const currentPeriod = periods.find(p => p.isCurrent) || periods[0] || null;
-  const activePeriod = periods.find(p => p.id === activePeriodId) || currentPeriod || {
+  const activePeriod = periods.find(p => String(p.id) === String(activePeriodId)) || currentPeriod || {
     id: null,
     name: '—',
     semester: '—',

@@ -159,13 +159,45 @@ const ROLE_LABELS = {
   auditor:   'Auditor',
 };
 
+/** Helper kalkulasi batas waktu unggah (sama persis dengan format di Manajemen Periode Akademik) */
+const formatDeadline = (dateStr) => {
+  if (!dateStr) return { text: 'Tidak dibatasi', isPassed: false, isNear: false, diffDays: null };
+  const normalized = typeof dateStr === 'string' ? dateStr.replace(' ', 'T') : dateStr;
+  const d = new Date(normalized);
+  if (isNaN(d.getTime())) return { text: dateStr, isPassed: false, isNear: false, diffDays: null };
+
+  const now = new Date();
+  const isPassed = now > d;
+  const diffTime = d.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const isNear = !isPassed && diffDays <= 7;
+
+  const formatted = d.toLocaleDateString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }) + ' WIB';
+
+  return { text: formatted, isPassed, isNear, diffDays };
+};
+
 export default function Sidebar() {
   const { url: pathname } = usePage();
   const { user, logout, hasPermission } = useAuth();
-  const { periods, activePeriodId, setActivePeriodId } = usePeriod();
+  const { periods, activePeriod, activePeriodId, setActivePeriodId } = usePeriod();
   const userRole    = user?.role;
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Pastikan selectedPeriod selalu terisi periode aktif saat ini
+  const selectedPeriod =
+    periods.find(p => String(p.id) === String(activePeriodId)) ||
+    activePeriod ||
+    periods.find(p => p.isCurrent) ||
+    periods[0] ||
+    null;
 
   // Close mobile menu when route changes
   useEffect(() => {
@@ -245,7 +277,7 @@ export default function Sidebar() {
         </div>
 
         {/* Period Selector */}
-        <div style={{ padding: '0 var(--space-4) var(--space-4)', position: 'relative' }}>
+        <div style={{ padding: '0 0 16px 0', position: 'relative' }}>
           <div style={{
             display: 'flex', flexDirection: 'column', gap: '6px',
             background: 'rgba(255,255,255,0.06)', padding: '10px 14px', borderRadius: '10px',
@@ -261,7 +293,7 @@ export default function Sidebar() {
                <label style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', cursor: 'pointer' }}>
                  Periode Akademik
                </label>
-               {periods.find(p => p.id === activePeriodId)?.isCurrent ? (
+               {selectedPeriod?.isCurrent ? (
                  <span style={{ fontSize: '9px', padding: '2px 6px', background: 'rgba(16, 185, 129, 0.2)', color: '#34D399', borderRadius: '10px', fontWeight: 700 }}>AKTIF</span>
                ) : (
                  <span style={{ fontSize: '9px', padding: '2px 6px', background: 'rgba(255, 255, 255, 0.1)', color: 'rgba(255,255,255,0.6)', borderRadius: '10px', fontWeight: 700 }}>ARSIP</span>
@@ -270,12 +302,94 @@ export default function Sidebar() {
             
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ color: '#fff', fontSize: '13.5px', fontWeight: 600 }}>
-                {periods.find(p => p.id === activePeriodId)?.name} {periods.find(p => p.id === activePeriodId)?.semester}
+                {selectedPeriod ? `${selectedPeriod.name} ${selectedPeriod.semester}` : 'Memuat periode...'}
               </div>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
             </div>
+
+            {/* Keterangan Batas Waktu Unggah */}
+            {(() => {
+              if (!selectedPeriod) return null;
+              const deadline = selectedPeriod.uploadDeadline;
+              const info = formatDeadline(deadline);
+
+              if (!deadline) {
+                return (
+                  <div style={{
+                    marginTop: '4px',
+                    paddingTop: '6px',
+                    borderTop: '1px solid rgba(255,255,255,0.08)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '11px',
+                    color: 'rgba(255,255,255,0.45)',
+                  }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#94A3B8', display: 'inline-block' }}></span>
+                    <span>Batas Unggah: Tidak dibatasi</span>
+                  </div>
+                );
+              }
+
+              if (info.isPassed) {
+                return (
+                  <div style={{
+                    marginTop: '4px',
+                    paddingTop: '6px',
+                    borderTop: '1px solid rgba(255,255,255,0.08)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '6px',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#EF4444', display: 'inline-block' }}></span>
+                      <span style={{ fontSize: '11px', color: '#F87171', fontWeight: 700 }}>
+                        Sudah Berakhir
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '10.5px', color: 'rgba(255,255,255,0.4)' }}>
+                      {info.text.split(' ')[0]} {info.text.split(' ')[1]}
+                    </span>
+                  </div>
+                );
+              }
+
+              return (
+                <div style={{
+                  marginTop: '4px',
+                  paddingTop: '6px',
+                  borderTop: '1px solid rgba(255,255,255,0.08)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '6px',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: '50%',
+                      backgroundColor: info.isNear ? '#D97706' : '#059669',
+                      display: 'inline-block',
+                      boxShadow: info.isNear ? '0 0 8px rgba(217, 119, 6, 0.8)' : 'none'
+                    }}></span>
+                    <span style={{
+                      fontSize: '11.5px',
+                      color: info.isNear ? '#FBBF24' : '#34D399',
+                      fontWeight: 700,
+                    }}>
+                      {info.diffDays === 0 ? 'Hari ini terakhir!' : `Tersisa ${info.diffDays} hari`}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '10.5px', color: 'rgba(255,255,255,0.45)' }}>
+                    s/d {info.text.split(' ')[0]} {info.text.split(' ')[1]}
+                  </span>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Custom Dropdown Menu */}
@@ -287,38 +401,67 @@ export default function Sidebar() {
                 onClick={() => setIsDropdownOpen(false)} 
               />
               <div style={{
-                position: 'absolute', top: '100%', left: 'var(--space-4)', right: 'var(--space-4)',
+                position: 'absolute', top: '100%', left: 0, right: 0,
                 background: '#1E293B', border: '1px solid rgba(255,255,255,0.1)',
                 borderRadius: '8px', marginTop: '4px', padding: '4px',
                 boxShadow: '0 10px 25px rgba(0,0,0,0.2)', zIndex: 100,
-                maxHeight: '200px', overflowY: 'auto'
+                maxHeight: '220px', overflowY: 'auto'
               }}>
-                {periods.map(p => (
-                  <button
-                    key={p.id}
-                    onClick={() => {
-                      setActivePeriodId(p.id);
-                      setIsDropdownOpen(false);
-                    }}
-                    style={{
-                      width: '100%', textAlign: 'left', padding: '8px 10px',
-                      background: activePeriodId === p.id ? 'rgba(255,255,255,0.1)' : 'transparent',
-                      color: activePeriodId === p.id ? '#fff' : 'rgba(255,255,255,0.7)',
-                      borderRadius: '6px', fontSize: '13px', fontWeight: 500,
-                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                      border: 'none', cursor: 'pointer', transition: 'all 0.1s'
-                    }}
-                    onMouseEnter={e => { if(activePeriodId !== p.id) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
-                    onMouseLeave={e => { if(activePeriodId !== p.id) e.currentTarget.style.background = 'transparent' }}
-                  >
-                    <span>{p.name} {p.semester}</span>
-                    {p.id === activePeriodId && (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12"></polyline>
-                      </svg>
-                    )}
-                  </button>
-                ))}
+                {periods.map(p => {
+                  const isItemActive = String(p.id) === String(selectedPeriod?.id);
+                  const pInfo = formatDeadline(p.uploadDeadline);
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => {
+                        setActivePeriodId(p.id);
+                        setIsDropdownOpen(false);
+                      }}
+                      style={{
+                        width: '100%', textAlign: 'left', padding: '8px 10px',
+                        background: isItemActive ? 'rgba(255,255,255,0.1)' : 'transparent',
+                        color: isItemActive ? '#fff' : 'rgba(255,255,255,0.7)',
+                        borderRadius: '6px', fontSize: '13px', fontWeight: 500,
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        border: 'none', cursor: 'pointer', transition: 'all 0.1s'
+                      }}
+                      onMouseEnter={e => { if(!isItemActive) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+                      onMouseLeave={e => { if(!isItemActive) e.currentTarget.style.background = 'transparent' }}
+                    >
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span style={{ fontWeight: 600 }}>{p.name} {p.semester}</span>
+                        {p.uploadDeadline ? (
+                          <span style={{
+                            fontSize: '10.5px',
+                            color: pInfo.isPassed ? '#F87171' : pInfo.isNear ? '#FBBF24' : '#34D399',
+                            fontWeight: 600,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px'
+                          }}>
+                            <span style={{
+                              width: 5,
+                              height: 5,
+                              borderRadius: '50%',
+                              backgroundColor: pInfo.isPassed ? '#DC2626' : pInfo.isNear ? '#D97706' : '#059669',
+                              display: 'inline-block'
+                            }}></span>
+                            {pInfo.isPassed ? 'Sudah Berakhir' : pInfo.diffDays === 0 ? 'Hari ini terakhir!' : `Tersisa ${pInfo.diffDays} hari`}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
+                            Tidak dibatasi
+                          </span>
+                        )}
+                      </div>
+                      {isItemActive && (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </>
           )}
