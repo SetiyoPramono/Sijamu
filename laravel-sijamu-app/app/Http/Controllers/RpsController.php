@@ -29,8 +29,8 @@ class RpsController extends Controller
             return response()->json(['message' => 'Anda tidak memiliki hak akses untuk mengunggah RPS pada mata kuliah ini.'], 403);
         }
 
-        // Store the file in storage/app/public/rps/{course_id}/
-        $path = $file->store("rps/{$courseId}", 'public');
+        // Store the file in storage/app/private/rps/{course_id}/
+        $path = $file->store("rps/{$courseId}", 'private');
 
         // Record the file in the database
         $doc = RpsDocument::create([
@@ -47,7 +47,7 @@ class RpsController extends Controller
             'id'         => $doc->id,
             'name'       => $file->getClientOriginalName(),
             'size'       => $file->getSize(),
-            'url'        => Storage::url($path),
+            'url'        => route('documents.rps.show', ['id' => $doc->id]),
             'uploadedAt' => $doc->created_at->toISOString(),
         ]);
     }
@@ -65,8 +65,13 @@ class RpsController extends Controller
             return response()->json(['message' => 'Anda tidak memiliki wewenang untuk menghapus dokumen ini.'], 403);
         }
 
-        // Delete the physical file from storage
-        Storage::disk('public')->delete($doc->file_path);
+        // Delete the physical file from storage (private or legacy public)
+        if (Storage::disk('private')->exists($doc->file_path)) {
+            Storage::disk('private')->delete($doc->file_path);
+        }
+        if (Storage::disk('public')->exists($doc->file_path)) {
+            Storage::disk('public')->delete($doc->file_path);
+        }
 
         // Delete the database record
         $doc->delete();

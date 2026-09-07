@@ -24,7 +24,7 @@ class MutuDocumentController extends Controller
                     'name' => $doc->file_name,
                     'size' => $doc->file_size,
                     'type' => $doc->file_type,
-                    'url' => \Illuminate\Support\Facades\Storage::url($doc->file_path),
+                    'url' => route('documents.mutu.show', ['id' => $doc->id]),
                 ],
                 'uploader' => $doc->user ? $doc->user->name : null,
                 'created_at' => $doc->created_at,
@@ -43,7 +43,7 @@ class MutuDocumentController extends Controller
         ]);
 
         $file = $request->file('file');
-        $path = $file->store("mutu/{$request->study_program_id}", 'public');
+        $path = $file->store("mutu/{$request->study_program_id}", 'private');
 
         $document = \App\Models\MutuDocument::create([
             'study_program_id' => $request->study_program_id,
@@ -68,7 +68,7 @@ class MutuDocumentController extends Controller
                     'name' => $document->file_name,
                     'size' => $document->file_size,
                     'type' => $document->file_type,
-                    'url' => \Illuminate\Support\Facades\Storage::url($document->file_path),
+                    'url' => route('documents.mutu.show', ['id' => $document->id]),
                 ],
                 'uploader' => $request->user()->name ?? 'Unknown',
                 'created_at' => $document->created_at,
@@ -86,6 +86,9 @@ class MutuDocumentController extends Controller
             return response()->json(['message' => 'Anda tidak memiliki wewenang untuk menghapus dokumen ini.'], 403);
         }
         
+        if (\Illuminate\Support\Facades\Storage::disk('private')->exists($document->file_path)) {
+            \Illuminate\Support\Facades\Storage::disk('private')->delete($document->file_path);
+        }
         if (\Illuminate\Support\Facades\Storage::disk('public')->exists($document->file_path)) {
             \Illuminate\Support\Facades\Storage::disk('public')->delete($document->file_path);
         }

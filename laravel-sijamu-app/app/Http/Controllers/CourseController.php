@@ -29,7 +29,7 @@ class CourseController extends Controller
                         'id'         => $doc->id,
                         'name'       => $doc->file_name ?? basename($doc->file_path),
                         'size'       => $doc->file_size ?? 0,
-                        'url'        => Storage::url($doc->file_path),
+                        'url'        => route('documents.rps.show', ['id' => $doc->id]),
                         'uploadedAt' => $doc->created_at->toISOString(),
                         'status'     => $doc->status,
                         'uploader'   => $doc->user ? $doc->user->name : 'Unknown',
@@ -119,10 +119,15 @@ class CourseController extends Controller
     {
         $course = Course::with('rpsDocuments')->findOrFail($id);
 
-        // Hapus fisik file RPS terkait dari storage disk
+        // Hapus fisik file RPS terkait dari storage disk (private atau legacy public)
         foreach ($course->rpsDocuments as $doc) {
-            if ($doc->file_path && Storage::disk('public')->exists($doc->file_path)) {
-                Storage::disk('public')->delete($doc->file_path);
+            if ($doc->file_path) {
+                if (Storage::disk('private')->exists($doc->file_path)) {
+                    Storage::disk('private')->delete($doc->file_path);
+                }
+                if (Storage::disk('public')->exists($doc->file_path)) {
+                    Storage::disk('public')->delete($doc->file_path);
+                }
             }
         }
 

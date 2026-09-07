@@ -122,4 +122,13 @@ Route::middleware('auth')->group(function () {
     Route::delete('/api/mutu-documents/{id}', [\App\Http\Controllers\MutuDocumentController::class, 'destroy'])->middleware('permission:upload_document');
 });
 
+// Secure Document Streaming Endpoints (Mendukung Sesi Autentikasi & Signed URLs)
+Route::middleware(['web'])->group(function () {
+    Route::get('/documents/mutu/{id}/file', [\App\Http\Controllers\FileAccessController::class, 'streamMutuDocument'])
+        ->name('documents.mutu.show');
+    Route::get('/documents/rps/{id}/file', [\App\Http\Controllers\FileAccessController::class, 'streamRpsDocument'])
+        ->name('documents.rps.show');
+});
+
 require __DIR__.'/auth.php';
+
