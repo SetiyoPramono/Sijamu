@@ -129,9 +129,17 @@ export default function RpsPage() {
           <div className="page-header flex items-center justify-between">
             <div>
               <h1 className="page-title">Rencana Pembelajaran Semester</h1>
-              <p className="page-subtitle">
-                Periode Aktif: <strong>{activePeriod.name} {activePeriod.semester}</strong> 
-                {isArchive ? ' (Arsip)' : ''}
+              <p className="page-subtitle flex items-center flex-wrap gap-2">
+                <span>
+                  Periode Aktif: <strong>{activePeriod.name} {activePeriod.semester}</strong> 
+                  {isArchive ? ' (Arsip)' : ''}
+                </span>
+                {activePeriod.uploadDeadline && (
+                  <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full border ${new Date() > new Date(activePeriod.uploadDeadline) ? 'bg-red-50 text-red-700 border-red-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                    <span>⏰</span>
+                    <span>Batas Unggah: {new Date(activePeriod.uploadDeadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })} WIB</span>
+                  </span>
+                )}
               </p>
             </div>
             {activeCourse?.rpsFiles?.length > 0 && (

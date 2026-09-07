@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolePermissionSeeder::class,
             UploadConfigSeeder::class,
+            AcademicPeriodSeeder::class,
             CourseSeeder::class,
             ReportLogSeeder::class,
         ]);

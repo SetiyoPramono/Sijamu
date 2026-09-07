@@ -363,6 +363,34 @@ export default function UploadPage() {
             <div>
               {/* Progress summary moved to header */}
 
+              {/* Deadline notice */}
+              {activePeriod?.uploadDeadline && (
+                <div className={`mb-3 p-3.5 rounded-lg border flex flex-wrap items-center justify-between gap-3 text-sm ${new Date() > new Date(activePeriod.uploadDeadline) ? 'bg-red-50 border-red-200 text-red-700' : 'bg-blue-50 border-blue-200 text-blue-800'}`}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">⏰</span>
+                    <span>
+                      <strong>Batas Waktu Unggah Dokumen:</strong>{' '}
+                      {new Date(activePeriod.uploadDeadline).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })} WIB
+                    </span>
+                  </div>
+                  {new Date() > new Date(activePeriod.uploadDeadline) ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">
+                      Batas Waktu Berakhir
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700 border border-blue-200">
+                      Periode Berjalan
+                    </span>
+                  )}
+                </div>
+              )}
+
               {/* Checklist Table */}
               <div className={`card mt-4`}>
                 <h2 className="card-title">Daftar Dokumen Wajib</h2>

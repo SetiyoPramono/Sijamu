@@ -8,16 +8,56 @@ import { ToastContainer, addToast } from '@/components/Toast';
 import { usePeriod } from '@/context/PeriodContext';
 
 export default function AdminPeriodsPage() {
-  const { periods, setPeriods, setActivePeriodId } = usePeriod();
+  const {
+    periods,
+    loading,
+    createPeriod,
+    updatePeriod,
+    activatePeriod,
+    deletePeriod,
+  } = usePeriod();
 
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
 
-  const EMPTY_FORM = { name: '', semester: 'Ganjil' };
+  const EMPTY_FORM = { name: '', semester: 'Ganjil', uploadDeadline: '' };
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState({});
+
+  // ── Helper Format Batas Waktu untuk Input datetime-local ─────────────
+  const toDatetimeLocalInput = (dateStr) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  // ── Helper Format Batas Waktu untuk Tampilan ─────────────────────────
+  const formatDeadline = (dateStr) => {
+    if (!dateStr) return { text: 'Tidak dibatasi', isPassed: false, isNear: false };
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return { text: dateStr, isPassed: false, isNear: false };
+
+    const now = new Date();
+    const isPassed = now > d;
+    const diffTime = d.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const isNear = !isPassed && diffDays <= 7;
+
+    const formatted = d.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }) + ' WIB';
+
+    return { text: formatted, isPassed, isNear, diffDays };
+  };
 
   // ── Stats ───────────────────────────────────────────────────────────
   const totalPeriods  = periods.length;
@@ -37,7 +77,11 @@ export default function AdminPeriodsPage() {
     setFormErrors({});
     if (period) {
       setEditId(period.id);
-      setForm({ name: period.name, semester: period.semester });
+      setForm({
+        name: period.name,
+        semester: period.semester,
+        uploadDeadline: toDatetimeLocalInput(period.uploadDeadline),
+      });
     } else {
       setEditId(null);
       setForm(EMPTY_FORM);
@@ -45,7 +89,7 @@ export default function AdminPeriodsPage() {
     setModalOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const errors = {};
     const nameTrimmed = form.name.trim();
     
@@ -61,7 +105,7 @@ export default function AdminPeriodsPage() {
     
     if (!form.semester) errors.semester = 'Semester wajib dipilih';
 
-    // 2. Cek Duplikasi (Tahun Ajaran + Semester)
+    // 2. Cek Duplikasi (Tahun Ajaran + Semester) di sisi client
     if (!errors.name && !errors.semester) {
       const isDuplicate = periods.some(p => 
         p.name === nameTrimmed && 
@@ -78,21 +122,31 @@ export default function AdminPeriodsPage() {
       return; 
     }
 
-    const finalForm = { ...form, name: nameTrimmed };
+    const finalForm = {
+      name: nameTrimmed,
+      semester: form.semester,
+      uploadDeadline: form.uploadDeadline || null,
+    };
 
-    if (editId) {
-      setPeriods(prev => prev.map(p => p.id === editId ? { ...p, ...finalForm } : p));
-      addToast('Berhasil', 'Data periode berhasil diperbarui.', 'success');
-    } else {
-      // Membersihkan spasi pada ID jika ada
-      const newId = `${nameTrimmed.replace(/\s+/g, '').replace('/', '-')}-${form.semester.toLowerCase()}`;
-      setPeriods(prev => [{ id: newId, name: nameTrimmed, semester: form.semester, isCurrent: false }, ...prev]);
-      addToast('Berhasil', 'Periode baru berhasil ditambahkan.', 'success');
+    try {
+      setActionLoading(true);
+      if (editId) {
+        await updatePeriod(editId, finalForm);
+        addToast('Berhasil', 'Data periode berhasil diperbarui.', 'success');
+      } else {
+        await createPeriod(finalForm);
+        addToast('Berhasil', 'Periode baru berhasil ditambahkan.', 'success');
+      }
+      setModalOpen(false);
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || 'Gagal menyimpan periode ke database.';
+      addToast('Gagal', errorMsg, 'error');
+    } finally {
+      setActionLoading(false);
     }
-    setModalOpen(false);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteTarget) return;
     const target = periods.find(p => p.id === deleteTarget);
     if (target?.isCurrent) {
@@ -100,15 +154,30 @@ export default function AdminPeriodsPage() {
       setDeleteTarget(null);
       return;
     }
-    setPeriods(prev => prev.filter(p => p.id !== deleteTarget));
-    addToast('Terhapus', 'Periode berhasil dihapus.', 'success');
-    setDeleteTarget(null);
+    try {
+      setActionLoading(true);
+      await deletePeriod(deleteTarget);
+      addToast('Terhapus', 'Periode berhasil dihapus dari database.', 'success');
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || 'Gagal menghapus periode.';
+      addToast('Gagal', errorMsg, 'error');
+    } finally {
+      setActionLoading(false);
+      setDeleteTarget(null);
+    }
   };
 
-  const setAsActive = (id) => {
-    setPeriods(prev => prev.map(p => ({ ...p, isCurrent: p.id === id })));
-    setActivePeriodId(id);
-    addToast('Diaktifkan', 'Periode berhasil diaktifkan. Seluruh sistem akan mengacu ke periode ini.', 'success');
+  const setAsActive = async (id) => {
+    try {
+      setActionLoading(true);
+      await activatePeriod(id);
+      addToast('Diaktifkan', 'Periode berhasil diaktifkan. Seluruh sistem akan mengacu ke periode ini.', 'success');
+    } catch (err) {
+      const errorMsg = err.response?.data?.message || 'Gagal mengaktifkan periode.';
+      addToast('Gagal', errorMsg, 'error');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   // ── Render ─────────────────────────────────────────────────────────
@@ -209,14 +278,27 @@ export default function AdminPeriodsPage() {
                     <th scope="col" style={{ textAlign: 'center', width: '52px' }}>No</th>
                     <th scope="col">Tahun Ajaran</th>
                     <th scope="col">Semester</th>
+                    <th scope="col">Batas Waktu Unggah</th>
                     <th scope="col" style={{ textAlign: 'center' }}>Status</th>
                     <th scope="col" style={{ textAlign: 'center' }}>Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.length === 0 ? (
+                  {loading ? (
                     <tr>
-                      <td colSpan="5" style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
+                      <td colSpan="6" style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--color-text-muted)' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                          <svg className="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                            <path d="M12 2a10 10 0 0 1 10 10" />
+                          </svg>
+                          <span>Memuat data periode dari database...</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" style={{ textAlign: 'center', padding: '48px 24px', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
                         {search ? 'Tidak ada periode yang cocok dengan pencarian.' : 'Belum ada data periode.'}
                       </td>
                     </tr>
@@ -226,6 +308,41 @@ export default function AdminPeriodsPage() {
                         <td style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontWeight: 500 }}>{idx + 1}</td>
                         <td style={{ fontWeight: 700, color: 'var(--color-text)' }}>{p.name}</td>
                         <td>{p.semester}</td>
+                        <td>
+                          {(() => {
+                            const info = formatDeadline(p.uploadDeadline);
+                            if (!p.uploadDeadline) {
+                              return <span style={{ color: 'var(--color-text-muted)', fontSize: '13px', fontStyle: 'italic' }}>Tidak dibatasi</span>;
+                            }
+                            if (info.isPassed) {
+                              return (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text)' }}>{info.text}</span>
+                                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-red-600">
+                                    <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#DC2626', display: 'inline-block' }}></span>
+                                    Sudah Berakhir
+                                  </span>
+                                </div>
+                              );
+                            }
+                            return (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text)' }}>{info.text}</span>
+                                {info.isNear ? (
+                                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-600">
+                                    <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#D97706', display: 'inline-block' }}></span>
+                                    {info.diffDays === 0 ? 'Hari ini terakhir!' : `Tersisa ${info.diffDays} hari`}
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600">
+                                    <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#059669', display: 'inline-block' }}></span>
+                                    Aktif
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </td>
                         <td style={{ textAlign: 'center' }}>
                           {p.isCurrent ? (
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-[#EBF2FF] text-[#1A56DB] border border-[#BFDBFE]">
@@ -248,6 +365,7 @@ export default function AdminPeriodsPage() {
                                 onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#ECFDF5'; }}
                                 onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
                                 onClick={() => setAsActive(p.id)}
+                                disabled={actionLoading}
                                 title="Jadikan periode ini sebagai periode aktif"
                               >
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -259,6 +377,7 @@ export default function AdminPeriodsPage() {
                             <button
                               className="btn btn-sm btn-outline"
                               onClick={() => openModal(p)}
+                              disabled={actionLoading}
                               aria-label={`Edit periode ${p.name} ${p.semester}`}
                             >
                               Edit
@@ -266,7 +385,7 @@ export default function AdminPeriodsPage() {
                             <button
                               className="btn btn-sm btn-danger"
                               onClick={() => setDeleteTarget(p.id)}
-                              disabled={p.isCurrent}
+                              disabled={p.isCurrent || actionLoading}
                               title={p.isCurrent ? 'Periode aktif tidak bisa dihapus' : 'Hapus periode'}
                               aria-label={`Hapus periode ${p.name} ${p.semester}`}
                             >
@@ -375,6 +494,42 @@ export default function AdminPeriodsPage() {
                   <p style={{ color: 'var(--color-danger)', fontSize: '12px', marginTop: '4px', fontWeight: 500 }}>{formErrors.semester}</p>
                 )}
               </div>
+
+              <div className="form-group">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label className="form-label" htmlFor="period-deadline" style={{ marginBottom: 0 }}>
+                    Batas Waktu Unggah Dokumen
+                  </label>
+                  {form.uploadDeadline && (
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, uploadDeadline: '' })}
+                      style={{
+                        fontSize: '12px',
+                        color: 'var(--color-danger)',
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        padding: 0,
+                      }}
+                      title="Hapus batas waktu"
+                    >
+                      Hapus Batas Waktu
+                    </button>
+                  )}
+                </div>
+                <input
+                  id="period-deadline"
+                  type="datetime-local"
+                  className="form-input"
+                  value={form.uploadDeadline}
+                  onChange={e => setForm({ ...form, uploadDeadline: e.target.value })}
+                />
+                <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', marginTop: '4px', lineHeight: 1.5 }}>
+                  Batas akhir bagi program studi dan dosen untuk mengunggah berkas dokumen mutu & RPS. Kosongkan jika tidak dibatasi waktu.
+                </p>
+              </div>
             </div>
 
             {/* Modal Footer */}
@@ -386,13 +541,27 @@ export default function AdminPeriodsPage() {
               gap: '12px',
               background: 'var(--color-bg-subtle)',
             }}>
-              <button className="btn btn-ghost" onClick={() => setModalOpen(false)}>Batal</button>
-              <button className="btn btn-primary" onClick={handleSave}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                  <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
-                </svg>
-                {editId ? 'Simpan Perubahan' : 'Simpan Periode'}
+              <button className="btn btn-ghost" onClick={() => setModalOpen(false)} disabled={actionLoading}>
+                Batal
+              </button>
+              <button className="btn btn-primary" onClick={handleSave} disabled={actionLoading}>
+                {actionLoading ? (
+                  <>
+                    <svg className="animate-spin" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                      <path d="M12 2a10 10 0 0 1 10 10" />
+                    </svg>
+                    Menyimpan...
+                  </>
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                      <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+                    </svg>
+                    {editId ? 'Simpan Perubahan' : 'Simpan Periode'}
+                  </>
+                )}
               </button>
             </div>
           </div>

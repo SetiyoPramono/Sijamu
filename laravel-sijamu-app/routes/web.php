@@ -47,6 +47,15 @@ Route::middleware('auth')->group(function () {
             return Inertia::render('Sijamu/admin/periods/page');
         })->middleware('permission:manage_periods');
 
+        // Academic Periods API endpoints
+        Route::get('/api/periods', [\App\Http\Controllers\AcademicPeriodController::class, 'index']);
+        Route::middleware('permission:manage_periods')->group(function () {
+            Route::post('/api/periods', [\App\Http\Controllers\AcademicPeriodController::class, 'store']);
+            Route::put('/api/periods/{id}', [\App\Http\Controllers\AcademicPeriodController::class, 'update']);
+            Route::patch('/api/periods/{id}/activate', [\App\Http\Controllers\AcademicPeriodController::class, 'setActive']);
+            Route::delete('/api/periods/{id}', [\App\Http\Controllers\AcademicPeriodController::class, 'destroy']);
+        });
+
         Route::get('/rps', function () {
             return Inertia::render('Sijamu/admin/rps/page');
         })->middleware('permission:manage_rps');
