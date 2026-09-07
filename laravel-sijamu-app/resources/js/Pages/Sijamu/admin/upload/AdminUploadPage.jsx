@@ -10,7 +10,7 @@ import { useUploadConfig } from '@/context/UploadConfigContext';
 import axios from 'axios';
 
 const emptyProdiForm = { id: '', nama: '' };
-const emptyDocForm   = { id: '', kode: '', nama: '', help: '', document_category_id: '' };
+const emptyDocForm   = { id: '', kode: '', nama: '', help: '', kriteria_lolos: '', kriteria_revisi: '', document_category_id: '' };
 const emptyCategoryForm = { id: '', name: '', description: '' };
 
 export default function AdminUploadPage() {
@@ -41,8 +41,9 @@ export default function AdminUploadPage() {
 
   const [showCriteriaModal, setShowCriteriaModal] = useState(false);
   const [activeCriteriaDoc, setActiveCriteriaDoc] = useState(null);
-  const [criteriaForm, setCriteriaForm] = useState({ id: '', label: '', bobot: '', kriteria: '' });
+  const [criteriaForm, setCriteriaForm] = useState({ id: '', label: '', bobot: '', kriteria: '', status: 'lolos' });
   const [criteriaEditing, setCriteriaEditing] = useState(false);
+  const [criteriaTabFilter, setCriteriaTabFilter] = useState('all'); // 'all', 'lolos', 'revisi'
   const criteriaLabelRef = useRef(null);
 
   useEffect(() => { if (showProdiModal) setTimeout(() => prodiInputRef.current?.focus(), 50); }, [showProdiModal]);
@@ -150,7 +151,9 @@ export default function AdminUploadPage() {
     e.preventDefault();
     const kode = docForm.kode.trim();
     const nama = docForm.nama.trim();
-    const help = docForm.help.trim();
+    const help = docForm.help ? docForm.help.trim() : '';
+    const kriteria_lolos = docForm.kriteria_lolos ? docForm.kriteria_lolos.trim() : '';
+    const kriteria_revisi = docForm.kriteria_revisi ? docForm.kriteria_revisi.trim() : '';
     const document_category_id = docForm.document_category_id || null;
     if (!kode || !nama) { addToast('Kode dan nama dokumen wajib diisi.', 'warning'); return; }
     
@@ -160,11 +163,11 @@ export default function AdminUploadPage() {
 
     try {
       if (docEditing) {
-        const res = await axios.put(`/admin/api/docs/${docForm.id}`, { kode, nama, help, document_category_id });
+        const res = await axios.put(`/admin/api/docs/${docForm.id}`, { kode, nama, help, kriteria_lolos, kriteria_revisi, document_category_id });
         setDocList(prev => prev.map(d => d.id === docForm.id ? res.data : d));
         addToast('Indikator dokumen berhasil diperbarui.', 'success');
       } else {
-        const res = await axios.post('/admin/api/docs', { kode, nama, help, document_category_id });
+        const res = await axios.post('/admin/api/docs', { kode, nama, help, kriteria_lolos, kriteria_revisi, document_category_id });
         setDocList(prev => [...prev, res.data]);
         addToast('Dokumen ' + kode + ' berhasil ditambahkan.', 'success');
       }
@@ -188,9 +191,11 @@ export default function AdminUploadPage() {
   };
 
   const openCriteria = (doc) => {
-    setActiveCriteriaDoc(doc);
-    setCriteriaForm({ id: '', label: '', bobot: '', kriteria: '' });
+    const list = doc.criteria || doc.criterias || [];
+    setActiveCriteriaDoc({ ...doc, criteria: list, criterias: list });
+    setCriteriaForm({ id: '', label: '', bobot: '', kriteria: '', status: 'lolos' });
     setCriteriaEditing(false);
+    setCriteriaTabFilter('all');
     setShowCriteriaModal(true);
   };
 
@@ -201,32 +206,43 @@ export default function AdminUploadPage() {
       const payload = {
         label: criteriaForm.label,
         bobot: criteriaForm.bobot === '' ? null : parseInt(criteriaForm.bobot),
-        kriteria: criteriaForm.kriteria
+        kriteria: criteriaForm.kriteria,
+        status: criteriaForm.status || 'lolos'
       };
 
       if (criteriaEditing) {
         const res = await axios.put(`/admin/api/docs/${activeCriteriaDoc.id}/criteria/${criteriaForm.id}`, payload);
+        const updateList = (arr) => (arr || []).map(c => c.id === res.data.id ? res.data : c);
         setDocList(prev => prev.map(d => {
           if (d.id === activeCriteriaDoc.id) {
-            return { ...d, criteria: d.criteria.map(c => c.id === res.data.id ? res.data : c) };
+            const updated = updateList(d.criteria || d.criterias || []);
+            return { ...d, criteria: updated, criterias: updated };
           }
           return d;
         }));
-        setActiveCriteriaDoc(prev => ({...prev, criteria: prev.criteria.map(c => c.id === res.data.id ? res.data : c)}));
+        setActiveCriteriaDoc(prev => {
+          const updated = updateList(prev.criteria || prev.criterias || []);
+          return { ...prev, criteria: updated, criterias: updated };
+        });
         addToast('Kriteria diperbarui.', 'success');
       } else {
         const res = await axios.post(`/admin/api/docs/${activeCriteriaDoc.id}/criteria`, payload);
+        const appendList = (arr) => [...(arr || []), res.data];
         setDocList(prev => prev.map(d => {
           if (d.id === activeCriteriaDoc.id) {
-            return { ...d, criteria: [...(d.criteria || []), res.data] };
+            const updated = appendList(d.criteria || d.criterias || []);
+            return { ...d, criteria: updated, criterias: updated };
           }
           return d;
         }));
-        setActiveCriteriaDoc(prev => ({...prev, criteria: [...(prev.criteria || []), res.data]}));
+        setActiveCriteriaDoc(prev => {
+          const updated = appendList(prev.criteria || prev.criterias || []);
+          return { ...prev, criteria: updated, criterias: updated };
+        });
         addToast('Kriteria ditambahkan.', 'success');
       }
       setCriteriaEditing(false);
-      setCriteriaForm({ id: '', label: '', bobot: '', kriteria: '' });
+      setCriteriaForm({ id: '', label: '', bobot: '', kriteria: '', status: 'lolos' });
     } catch (err) {
       addToast(err.response?.data?.message || 'Gagal menyimpan kriteria.', 'error');
     }
@@ -235,13 +251,18 @@ export default function AdminUploadPage() {
   const deleteCriteria = async (cId) => {
     try {
         await axios.delete(`/admin/api/docs/${activeCriteriaDoc.id}/criteria/${cId}`);
+        const removeList = (arr) => (arr || []).filter(c => c.id !== cId);
         setDocList(prev => prev.map(d => {
           if (d.id === activeCriteriaDoc.id) {
-            return { ...d, criteria: d.criteria.filter(c => c.id !== cId) };
+            const updated = removeList(d.criteria || d.criterias || []);
+            return { ...d, criteria: updated, criterias: updated };
           }
           return d;
         }));
-        setActiveCriteriaDoc(prev => ({...prev, criteria: prev.criteria.filter(c => c.id !== cId)}));
+        setActiveCriteriaDoc(prev => {
+          const updated = removeList(prev.criteria || prev.criterias || []);
+          return { ...prev, criteria: updated, criterias: updated };
+        });
         addToast('Kriteria dihapus.', 'info');
     } catch (err) {
         addToast('Gagal menghapus kriteria.', 'error');
@@ -342,7 +363,37 @@ export default function AdminUploadPage() {
                   Panduan Upload
                   <span className="text-xs font-normal text-[var(--color-text-muted)] ml-2">(Opsional)</span>
                 </label>
-                <textarea id="doc-help-input" className="form-textarea" placeholder="Tuliskan panduan singkat bagi pengguna saat mengunggah dokumen ini..." value={docForm.help} onChange={e => setDocForm(f => ({ ...f, help: e.target.value }))} rows={3} />
+                <textarea id="doc-help-input" className="form-textarea" placeholder="Tuliskan panduan singkat bagi pengguna saat mengunggah dokumen ini..." value={docForm.help || ''} onChange={e => setDocForm(f => ({ ...f, help: e.target.value }))} rows={2} />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="form-group">
+                  <label className="form-label text-xs font-bold text-emerald-700 flex items-center gap-1.5" htmlFor="doc-kriteria-lolos">
+                    <span>✅</span> Kriteria File Lolos &amp; Sesuai
+                    <span className="text-[10px] font-normal text-gray-400">(Opsional)</span>
+                  </label>
+                  <textarea
+                    id="doc-kriteria-lolos"
+                    className="form-textarea text-xs"
+                    placeholder="Contoh: Dokumen lengkap bertanda tangan basah / digital, format PDF, berlaku tahun berjalan..."
+                    value={docForm.kriteria_lolos || ''}
+                    onChange={e => setDocForm(f => ({ ...f, kriteria_lolos: e.target.value }))}
+                    rows={3}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label text-xs font-bold text-amber-700 flex items-center gap-1.5" htmlFor="doc-kriteria-revisi">
+                    <span>⚠️</span> Kriteria File Harus Direvisi
+                    <span className="text-[10px] font-normal text-gray-400">(Opsional)</span>
+                  </label>
+                  <textarea
+                    id="doc-kriteria-revisi"
+                    className="form-textarea text-xs"
+                    placeholder="Contoh: Belum disahkan pejabat, lampiran kurang lengkap, format scan miring/buram..."
+                    value={docForm.kriteria_revisi || ''}
+                    onChange={e => setDocForm(f => ({ ...f, kriteria_revisi: e.target.value }))}
+                    rows={3}
+                  />
+                </div>
               </div>
               <div className="flex gap-3 justify-end mt-2">
                 <button type="button" className="btn btn-ghost" onClick={() => setShowDocModal(false)}>Batal</button>
@@ -389,60 +440,278 @@ export default function AdminUploadPage() {
 
       {showCriteriaModal && activeCriteriaDoc && (
         <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowCriteriaModal(false); }} role="dialog" aria-modal="true" aria-labelledby="criteria-modal-title">
-          <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-[800px] max-h-[90vh] overflow-y-auto animate-[scaleIn_0.2s_ease]">
-            <div className="flex items-center justify-between mb-6">
+          <div className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 w-full max-w-[880px] max-h-[92vh] overflow-y-auto animate-[scaleIn_0.2s_ease]">
+            <div className="flex items-center justify-between mb-5 pb-4 border-b border-[var(--color-border)]">
               <div>
                 <h2 id="criteria-modal-title" className="text-xl font-bold text-[var(--color-text)]">
-                  Kriteria Penilaian
+                  Kriteria Penilaian &amp; Kelayakan File Upload
                 </h2>
-                <p className="text-sm text-[var(--color-text-muted)] mt-1">{activeCriteriaDoc.kode} - {activeCriteriaDoc.nama}</p>
+                <p className="text-sm text-[var(--color-text-muted)] mt-1 flex items-center gap-2 flex-wrap">
+                  <span className="font-mono font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded text-xs">
+                    {activeCriteriaDoc.kode}
+                  </span>
+                  <span className="font-medium text-gray-800">{activeCriteriaDoc.nama}</span>
+                </p>
               </div>
               <button className="w-9 h-9 rounded-md flex items-center justify-center text-[var(--color-text-muted)] hover:bg-[var(--color-bg)] transition-colors bg-transparent border-none cursor-pointer" onClick={() => setShowCriteriaModal(false)} aria-label="Tutup">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="font-semibold text-[var(--color-text)] mb-3">Daftar Kriteria</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Kolom Kiri: Daftar Kriteria */}
+              <div className="lg:col-span-7 flex flex-col gap-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <h3 className="font-bold text-[var(--color-text)] text-sm">
+                    Daftar Kriteria Penilaian ({activeCriteriaDoc.criteria?.length || 0})
+                  </h3>
+                  {/* Filter Tab Lolos vs Revisi */}
+                  <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg text-xs font-semibold">
+                    <button
+                      type="button"
+                      className={`px-2 py-1 rounded transition-colors ${criteriaTabFilter === 'all' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-600 hover:text-gray-900'}`}
+                      onClick={() => setCriteriaTabFilter('all')}
+                    >
+                      Semua
+                    </button>
+                    <button
+                      type="button"
+                      className={`px-2 py-1 rounded transition-colors ${criteriaTabFilter === 'lolos' ? 'bg-emerald-600 text-white shadow-sm' : 'text-gray-600 hover:text-emerald-700'}`}
+                      onClick={() => setCriteriaTabFilter('lolos')}
+                    >
+                      ✅ Lolos ({(activeCriteriaDoc.criteria || []).filter(c => c.status === 'lolos').length})
+                    </button>
+                    <button
+                      type="button"
+                      className={`px-2 py-1 rounded transition-colors ${criteriaTabFilter === 'revisi' ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-600 hover:text-amber-700'}`}
+                      onClick={() => setCriteriaTabFilter('revisi')}
+                    >
+                      ⚠️ Revisi ({(activeCriteriaDoc.criteria || []).filter(c => c.status === 'revisi').length})
+                    </button>
+                  </div>
+                </div>
+
                 {(!activeCriteriaDoc.criteria || activeCriteriaDoc.criteria.length === 0) ? (
-                  <div className="text-sm text-[var(--color-text-muted)] italic">Belum ada kriteria. Sistem akan menggunakan nilai default jika kosong.</div>
+                  <div className="text-xs text-[var(--color-text-muted)] italic p-6 text-center border border-dashed border-gray-300 rounded-lg bg-gray-50">
+                    Belum ada kriteria untuk dokumen ini. Tambahkan kriteria kelayakan di form sebelah kanan.
+                  </div>
                 ) : (
-                  <div className="flex flex-col gap-2">
-                    {activeCriteriaDoc.criteria.sort((a, b) => (a.bobot === null ? -1 : a.bobot) - (b.bobot === null ? -1 : b.bobot)).map(c => (
-                      <div key={c.id} className="p-3 border border-[var(--color-border)] rounded-lg text-sm bg-[var(--color-bg)] flex justify-between items-start">
-                        <div>
-                          <div className="font-bold text-[var(--color-text)]">{c.label} <span className="text-[var(--color-text-muted)] font-normal ml-2">Bobot: {c.bobot !== null ? c.bobot : '-'}</span></div>
-                          <div className="text-[var(--color-text-muted)] mt-1">{c.kriteria || '-'}</div>
-                        </div>
-                        <div className="flex gap-1 shrink-0 ml-3">
-                          <button className="btn btn-sm btn-ghost p-1" onClick={() => {setCriteriaForm({id: c.id, label: c.label, bobot: c.bobot === null ? '' : c.bobot, kriteria: c.kriteria || ''}); setCriteriaEditing(true); criteriaLabelRef.current?.focus();}} aria-label="Edit kriteria">✏️</button>
-                          <button className="btn btn-sm btn-ghost p-1 text-[var(--color-danger)]" onClick={() => deleteCriteria(c.id)} aria-label="Hapus kriteria">❌</button>
-                        </div>
-                      </div>
-                    ))}
+                  <div className="flex flex-col gap-2.5 max-h-[460px] overflow-y-auto pr-1">
+                    {activeCriteriaDoc.criteria
+                      .filter(c => criteriaTabFilter === 'all' ? true : c.status === criteriaTabFilter)
+                      .sort((a, b) => {
+                        // Urutkan lolos duluan, lalu bobot tertinggi
+                        if (a.status !== b.status) return a.status === 'lolos' ? -1 : 1;
+                        return (b.bobot || 0) - (a.bobot || 0);
+                      })
+                      .map(c => {
+                        const isLolos = c.status === 'lolos';
+                        return (
+                          <div
+                            key={c.id}
+                            className={`p-3.5 border rounded-lg text-xs transition-all shadow-sm flex justify-between items-start ${
+                              isLolos
+                                ? 'bg-emerald-50/40 border-emerald-200 hover:border-emerald-300'
+                                : 'bg-amber-50/40 border-amber-200 hover:border-amber-300'
+                            }`}
+                          >
+                            <div className="flex-1 pr-2">
+                              <div className="flex items-center gap-2 flex-wrap mb-1">
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                                  isLolos
+                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                    : 'bg-amber-100 text-amber-800 border border-amber-300'
+                                }`}>
+                                  {isLolos ? '✅ Lolos dan Sesuai' : '⚠️ Harus Direvisi'}
+                                </span>
+                                <span className="font-bold text-gray-900 text-sm">{c.label}</span>
+                                <span className="text-[11px] text-gray-500 font-semibold bg-white/80 border border-gray-200 px-1.5 py-0.5 rounded">
+                                  Bobot: {c.bobot !== null && c.bobot !== undefined ? c.bobot : 'N/A'}
+                                </span>
+                              </div>
+                              <p className="text-gray-600 mt-1 leading-relaxed text-[11.5px]">
+                                {c.kriteria || <span className="italic text-gray-400">Tidak ada deskripsi detail</span>}
+                              </p>
+                            </div>
+                            <div className="flex gap-1 shrink-0 ml-2">
+                              <button
+                                className="btn btn-sm btn-ghost p-1 text-gray-600 hover:text-blue-600 hover:bg-white"
+                                onClick={() => {
+                                  setCriteriaForm({
+                                    id: c.id,
+                                    label: c.label,
+                                    bobot: c.bobot === null || c.bobot === undefined ? '' : c.bobot,
+                                    kriteria: c.kriteria || '',
+                                    status: c.status || 'lolos'
+                                  });
+                                  setCriteriaEditing(true);
+                                  criteriaLabelRef.current?.focus();
+                                }}
+                                aria-label="Edit kriteria"
+                                title="Edit Kriteria"
+                              >
+                                ✏️
+                              </button>
+                              <button
+                                className="btn btn-sm btn-ghost p-1 text-red-500 hover:bg-white"
+                                onClick={() => deleteCriteria(c.id)}
+                                aria-label="Hapus kriteria"
+                                title="Hapus Kriteria"
+                              >
+                                ❌
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
                   </div>
                 )}
               </div>
 
-              <div className="bg-[var(--color-bg)] p-5 rounded-xl border border-[var(--color-border)] h-fit">
-                <h3 className="font-semibold text-[var(--color-text)] mb-3">{criteriaEditing ? 'Edit Kriteria' : 'Tambah Kriteria Baru'}</h3>
-                <form onSubmit={handleCriteriaSubmit} className="flex flex-col gap-4">
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="crit-label">Label <span className="text-[var(--color-danger)]">*</span></label>
-                    <input ref={criteriaLabelRef} id="crit-label" type="text" className="form-input" placeholder="contoh: Sesuai" value={criteriaForm.label} onChange={e => setCriteriaForm(f => ({...f, label: e.target.value}))} required />
+              {/* Kolom Kanan: Form Tambah / Edit Kriteria */}
+              <div className="lg:col-span-5 bg-gray-50 p-5 rounded-xl border border-gray-200 h-fit">
+                {criteriaEditing && (
+                  <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-200">
+                    <h3 className="font-bold text-[var(--color-text)] text-sm">
+                      ✏️ Edit Kriteria
+                    </h3>
+                    <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                      Mode Edit
+                    </span>
                   </div>
+                )}
+
+                <form onSubmit={handleCriteriaSubmit} className="flex flex-col gap-3.5">
+                  {/* Status Kelayakan: Lolos vs Revisi */}
                   <div className="form-group">
-                    <label className="form-label" htmlFor="crit-bobot">Bobot</label>
-                    <input id="crit-bobot" type="number" className="form-input" placeholder="contoh: 3 (kosongkan jika N/A)" value={criteriaForm.bobot} onChange={e => setCriteriaForm(f => ({...f, bobot: e.target.value}))} />
+                    <label className="form-label text-xs font-bold text-gray-800">
+                      Status Kelayakan Dokumen <span className="text-red-500">*</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 mt-1">
+                      <button
+                        type="button"
+                        onClick={() => setCriteriaForm(f => ({ ...f, status: 'lolos' }))}
+                        className={`flex flex-col items-center justify-center p-2.5 rounded-lg border-2 text-xs font-bold transition-all cursor-pointer text-center ${
+                          criteriaForm.status === 'lolos'
+                            ? 'border-emerald-600 bg-emerald-50 text-emerald-900 shadow-sm'
+                            : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                        }`}
+                      >
+                        <span className="text-base mb-0.5">✅</span>
+                        <span>Lolos &amp; Sesuai</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCriteriaForm(f => ({ ...f, status: 'revisi' }))}
+                        className={`flex flex-col items-center justify-center p-2.5 rounded-lg border-2 text-xs font-bold transition-all cursor-pointer text-center ${
+                          criteriaForm.status === 'revisi'
+                            ? 'border-amber-600 bg-amber-50 text-amber-900 shadow-sm'
+                            : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                        }`}
+                      >
+                        <span className="text-base mb-0.5">⚠️</span>
+                        <span>Harus Direvisi</span>
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-1 leading-snug">
+                      {criteriaForm.status === 'lolos'
+                        ? '✅ Dokumen yang memenuhi kriteria ini dinyatakan lolos standar mutu & diterima.'
+                        : '⚠️ Dokumen dengan kriteria ini akan berstatus Perlu Revisi dan harus diperbaiki.'}
+                    </p>
                   </div>
+
+                  {/* Template Presets Cepat */}
                   <div className="form-group">
-                    <label className="form-label" htmlFor="crit-desc">Deskripsi Kriteria</label>
-                    <textarea id="crit-desc" className="form-textarea" placeholder="contoh: Dokumen telah memenuhi standar..." rows={4} value={criteriaForm.kriteria} onChange={e => setCriteriaForm(f => ({...f, kriteria: e.target.value}))} />
+                    <label className="text-[11px] font-semibold text-gray-500">Gunakan Template Cepat:</label>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {[
+                        { label: 'Sesuai Standar', status: 'lolos', bobot: 3, kriteria: 'Bukti tersedia dan menunjukkan bahwa dokumen telah memenuhi seluruh standar yang ditetapkan.' },
+                        { label: 'Melampaui', status: 'lolos', bobot: 4, kriteria: 'Bukti menunjukkan pencapaian yang melebihi standar dan praktik baik yang dipersyaratkan.' },
+                        { label: 'Perlu Revisi', status: 'revisi', bobot: 2, kriteria: 'Bukti ada namun terdapat lampiran/tanda tangan/format yang belum lengkap dan harus diperbaiki.' },
+                        { label: 'Tidak Sesuai', status: 'revisi', bobot: 1, kriteria: 'Dokumen belum memenuhi indikator atau standar yang dipersyaratkan.' },
+                        { label: 'Tidak Tersedia', status: 'revisi', bobot: 0, kriteria: 'Bukti atau dokumen yang dipersyaratkan belum diunggah atau tidak tersedia.' }
+                      ].map(preset => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          className="px-2 py-1 text-[10.5px] font-medium bg-white hover:bg-gray-100 border border-gray-200 rounded text-gray-700 transition-colors"
+                          onClick={() => setCriteriaForm(f => ({
+                            ...f,
+                            label: preset.label,
+                            status: preset.status,
+                            bobot: preset.bobot,
+                            kriteria: preset.kriteria
+                          }))}
+                        >
+                          {preset.status === 'lolos' ? '✅' : '⚠️'} {preset.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex gap-2 justify-end mt-2">
-                    {criteriaEditing && <button type="button" className="btn btn-sm btn-ghost" onClick={() => {setCriteriaEditing(false); setCriteriaForm({id:'', label:'', bobot:'', kriteria:''});}}>Batal</button>}
-                    <button type="submit" className="btn btn-sm btn-primary px-4">{criteriaEditing ? 'Simpan' : 'Tambah'}</button>
+
+                  <div className="form-group">
+                    <label className="form-label text-xs font-bold text-gray-800" htmlFor="crit-label">
+                      Label Kriteria <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      ref={criteriaLabelRef}
+                      id="crit-label"
+                      type="text"
+                      className="form-input text-xs h-9"
+                      placeholder="contoh: Sesuai / Lampiran Kurang"
+                      value={criteriaForm.label}
+                      onChange={e => setCriteriaForm(f => ({...f, label: e.target.value}))}
+                      required
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label text-xs font-bold text-gray-800" htmlFor="crit-bobot">
+                      Bobot Skor
+                      <span className="text-[11px] font-normal text-gray-400 ml-1">(Skala 0 - 4, opsional)</span>
+                    </label>
+                    <input
+                      id="crit-bobot"
+                      type="number"
+                      min="0"
+                      max="10"
+                      className="form-input text-xs h-9"
+                      placeholder="contoh: 3 (kosongkan jika N/A)"
+                      value={criteriaForm.bobot}
+                      onChange={e => setCriteriaForm(f => ({...f, bobot: e.target.value}))}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label text-xs font-bold text-gray-800" htmlFor="crit-desc">
+                      Deskripsi / Syarat Kriteria
+                    </label>
+                    <textarea
+                      id="crit-desc"
+                      className="form-textarea text-xs leading-relaxed"
+                      placeholder="Tuliskan penjelasan detail kondisi berkas..."
+                      rows={3}
+                      value={criteriaForm.kriteria}
+                      onChange={e => setCriteriaForm(f => ({...f, kriteria: e.target.value}))}
+                    />
+                  </div>
+
+                  <div className="flex gap-2 justify-end mt-1">
+                    {criteriaEditing && (
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-ghost text-xs"
+                        onClick={() => {
+                          setCriteriaEditing(false);
+                          setCriteriaForm({ id:'', label:'', bobot:'', kriteria:'', status: 'lolos' });
+                        }}
+                      >
+                        Batal
+                      </button>
+                    )}
+                    <button type="submit" className="btn btn-sm btn-primary text-xs px-4">
+                      {criteriaEditing ? 'Simpan Perubahan' : 'Tambah Kriteria'}
+                    </button>
                   </div>
                 </form>
               </div>
@@ -682,13 +951,40 @@ export default function AdminUploadPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredDocs.map((doc, idx) => (
+                      {filteredDocs.map((doc, idx) => {
+                        const list = doc.criteria || doc.criterias || [];
+                        const lolosCount = list.filter(c => c.status === 'lolos').length;
+                        const revisiCount = list.filter(c => c.status === 'revisi').length;
+                        return (
                         <tr key={doc.id}>
                           <td className="text-[var(--color-text-muted)]">{idx + 1}</td>
                           <td>
                             <span className="font-mono text-xs font-bold bg-[var(--color-primary-light)] text-[var(--color-primary)] px-2 py-1 rounded">{doc.kode}</span>
                           </td>
-                          <td><span className="font-semibold text-[var(--color-text)]">{doc.nama}</span><div className="text-xs text-[var(--color-text-muted)] mt-1">{doc.category?.name || '<Tanpa Kategori>'}</div></td>
+                          <td>
+                            <span className="font-semibold text-[var(--color-text)]">{doc.nama}</span>
+                            <div className="text-xs text-[var(--color-text-muted)] mt-1">{doc.category?.name || '<Tanpa Kategori>'}</div>
+                            <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200" title="Jumlah kriteria file lolos dan sesuai">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                {lolosCount} Lolos
+                              </span>
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200" title="Jumlah kriteria file harus direvisi">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                {revisiCount} Revisi
+                              </span>
+                              {doc.kriteria_lolos && (
+                                <span className="text-[10px] bg-emerald-100/70 text-emerald-800 px-1.5 py-0.5 rounded font-medium truncate max-w-[200px]" title={`Standar Lolos: ${doc.kriteria_lolos}`}>
+                                  ✓ {doc.kriteria_lolos}
+                                </span>
+                              )}
+                              {doc.kriteria_revisi && (
+                                <span className="text-[10px] bg-amber-100/70 text-amber-800 px-1.5 py-0.5 rounded font-medium truncate max-w-[200px]" title={`Standar Revisi: ${doc.kriteria_revisi}`}>
+                                  ⚠️ {doc.kriteria_revisi}
+                                </span>
+                              )}
+                            </div>
+                          </td>
                           <td>
                             <span className="text-sm text-[var(--color-text-muted)] line-clamp-2" title={doc.help}>
                               {doc.help || <em className="italic text-[var(--color-text-light)]">—</em>}
@@ -697,7 +993,7 @@ export default function AdminUploadPage() {
                           <td>
                             <div className="flex gap-2">
                               <button className="btn btn-sm btn-outline" onClick={() => openCriteria(doc)} aria-label={'Kriteria ' + doc.kode}>
-                                Kriteria
+                                Kriteria ({list.length})
                               </button>
                               <button className="btn btn-sm btn-outline" onClick={() => openEditDoc(doc)} aria-label={'Edit ' + doc.kode}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -710,7 +1006,8 @@ export default function AdminUploadPage() {
                             </div>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

@@ -31,9 +31,17 @@ export default function UploadPage() {
   const fileInputRef = useRef(null);
 
   // Derived data
-  // Derived data
   const buildIndicators = () => docList.map(d => ({
-    id: d.id, kode: d.kode, nama: d.nama, help: d.help, status: 'empty', file: null,
+    id: d.id,
+    kode: d.kode,
+    nama: d.nama,
+    help: d.help,
+    kriteria_lolos: d.kriteria_lolos,
+    kriteria_revisi: d.kriteria_revisi,
+    criteria: d.criteria || d.criterias || [],
+    criterias: d.criteria || d.criterias || [],
+    status: 'empty',
+    file: null,
   }));
 
   // Sync indicators when prodi changes or docList changes
@@ -193,6 +201,23 @@ export default function UploadPage() {
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                   <p className="text-xs text-red-600 font-semibold">Hanya file <strong>PDF</strong> yang diterima. Maksimal <strong>10MB</strong> per file.</p>
                 </div>
+                {(modalIndicator.kriteria_lolos || modalIndicator.kriteria_revisi) && (
+                  <div className="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1.5 text-left">
+                    <div className="text-xs font-bold text-slate-700 uppercase tracking-wide">📋 Standar Kelayakan Dokumen:</div>
+                    {modalIndicator.kriteria_lolos && (
+                      <div className="text-xs text-emerald-800 bg-emerald-50/80 p-2 rounded border border-emerald-200 flex items-start gap-1.5">
+                        <span className="shrink-0 font-bold">✅ Standar Lolos:</span>
+                        <span className="leading-relaxed">{modalIndicator.kriteria_lolos}</span>
+                      </div>
+                    )}
+                    {modalIndicator.kriteria_revisi && (
+                      <div className="text-xs text-amber-800 bg-amber-50/80 p-2 rounded border border-amber-200 flex items-start gap-1.5">
+                        <span className="shrink-0 font-bold">⚠️ Syarat Revisi:</span>
+                        <span className="leading-relaxed">{modalIndicator.kriteria_revisi}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <button
                 className="shrink-0 w-9 h-9 rounded-md flex items-center justify-center text-[var(--color-text-light)] transition-colors cursor-pointer bg-transparent border-none hover:not(:disabled):bg-[var(--color-bg)] hover:not(:disabled):text-[var(--color-text)]"
@@ -424,6 +449,20 @@ export default function UploadPage() {
                           <td>
                             <span className="text-base font-medium">{ind.nama}</span>
                             <div className="text-xs text-[var(--color-text-muted)] mt-1">{catName}</div>
+                            {(ind.kriteria_lolos || ind.kriteria_revisi) && (
+                              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                                {ind.kriteria_lolos && (
+                                  <span className="inline-flex items-center gap-1 text-[11px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200 max-w-[280px] truncate" title={`Standar Lolos: ${ind.kriteria_lolos}`}>
+                                    <span className="font-bold">✅ Lolos:</span> {ind.kriteria_lolos}
+                                  </span>
+                                )}
+                                {ind.kriteria_revisi && (
+                                  <span className="inline-flex items-center gap-1 text-[11px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-200 max-w-[280px] truncate" title={`Kondisi Revisi: ${ind.kriteria_revisi}`}>
+                                    <span className="font-bold">⚠️ Revisi:</span> {ind.kriteria_revisi}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </td>
                           <td>
                             <HelpTooltip title={ind.kode} content={ind.help} />

@@ -16,11 +16,11 @@ import { useUploadConfig } from '@/context/UploadConfigContext';
 
 /* ── DEFAULT CRITERIA ──────────────────────────────────────────── */
 const defaultCriteria = [
-  { id: 'def-4', label: 'Melampaui',      bobot: 4,    colorKey: 'melampaui',     kriteria: 'Bukti menunjukkan pencapaian yang melebihi standar, target, atau praktik baik yang dipersyaratkan.' },
-  { id: 'def-3', label: 'Sesuai',          bobot: 3,    colorKey: 'sesuai',        kriteria: 'Bukti tersedia dan menunjukkan bahwa indikator telah memenuhi standar yang ditetapkan.' },
-  { id: 'def-2', label: 'Tidak Sesuai',    bobot: 1,    colorKey: 'tidak-sesuai',  kriteria: 'Bukti tersedia, namun belum memenuhi indikator, persyaratan, atau standar yang ditetapkan.' },
-  { id: 'def-1', label: 'Tidak Tersedia',  bobot: 0,    colorKey: 'tidak-tersedia',kriteria: 'Bukti, dokumen, data, atau informasi yang dipersyaratkan tidak tersedia sehingga indikator tidak dapat diverifikasi.' },
-  { id: 'def-5', label: 'N/A',             bobot: null, colorKey: 'na',            kriteria: 'Indikator tidak relevan atau tidak berlaku pada unit yang diaudit sehingga tidak diperhitungkan dalam evaluasi.' },
+  { id: 'def-4', label: 'Melampaui',      bobot: 4,    colorKey: 'melampaui',     status: 'lolos',  kriteria: 'Bukti menunjukkan pencapaian yang melebihi standar, target, atau praktik baik yang dipersyaratkan.' },
+  { id: 'def-3', label: 'Sesuai',          bobot: 3,    colorKey: 'sesuai',        status: 'lolos',  kriteria: 'Bukti tersedia dan menunjukkan bahwa indikator telah memenuhi standar yang ditetapkan.' },
+  { id: 'def-2', label: 'Tidak Sesuai',    bobot: 1,    colorKey: 'tidak-sesuai',  status: 'revisi', kriteria: 'Bukti tersedia, namun belum memenuhi indikator, persyaratan, atau standar yang ditetapkan.' },
+  { id: 'def-1', label: 'Tidak Tersedia',  bobot: 0,    colorKey: 'tidak-tersedia',status: 'revisi', kriteria: 'Bukti, dokumen, data, atau informasi yang dipersyaratkan tidak tersedia sehingga indikator tidak dapat diverifikasi.' },
+  { id: 'def-5', label: 'N/A',             bobot: null, colorKey: 'na',            status: 'lolos',  kriteria: 'Indikator tidak relevan atau tidak berlaku pada unit yang diaudit sehingga tidak diperhitungkan dalam evaluasi.' },
 ];
 
 const temuanOptions = [
@@ -174,7 +174,9 @@ export default function AuditorPage() {
         isEvaluated: !!docEvaluations?.[id],
         evaluation: docEvaluations?.[id] || null,
         type: 'MUTU',
-        criteria: indicator?.criteria?.length > 0 ? indicator.criteria : null,
+        criteria: (indicator?.criterias && indicator.criterias.length > 0) ? indicator.criterias : ((indicator?.criteria && indicator.criteria.length > 0) ? indicator.criteria : null),
+        kriteria_lolos: indicator?.kriteria_lolos || null,
+        kriteria_revisi: indicator?.kriteria_revisi || null,
       });
     });
     return d;
@@ -205,7 +207,14 @@ export default function AuditorPage() {
     const raw = selectedDoc?.criteria || defaultCriteria;
     return raw
       .filter(c => c.label?.toLowerCase() !== 'belum dinilai')
-      .map(c => ({ ...c, colorKey: c.colorKey || getCriteriaColorKey(c.label) }));
+      .map(c => {
+        const isRevisi = c.status === 'revisi' || (!c.status && (c.label?.toLowerCase().includes('tidak') || c.bobot < 2));
+        return {
+          ...c,
+          status: c.status || (isRevisi ? 'revisi' : 'lolos'),
+          colorKey: c.colorKey || getCriteriaColorKey(c.label),
+        };
+      });
   }, [selectedDoc]);
 
   const isFormValid = !!evalData.criteriaId;
@@ -242,7 +251,10 @@ export default function AuditorPage() {
     const total = evalData.bobot !== null ? evalData.bobot : 0;
     const max = Math.max(...activeCriteria.map(c => c.bobot !== null ? c.bobot : 0), 4);
 
-    await evaluateDocument(selectedDoc.id, selectedDoc.course.prodi, total, max, evalData.catatan, evalData.temuan, 'Auditor');
+    const selectedCrit = activeCriteria.find(c => c.id === evalData.criteriaId);
+    const explicitStatus = selectedCrit?.status === 'revisi' ? 'warning' : (selectedCrit?.status === 'lolos' ? 'success' : null);
+
+    await evaluateDocument(selectedDoc.id, selectedDoc.course.prodi, total, max, evalData.catatan, evalData.temuan, 'Auditor', explicitStatus);
     setLoading(false);
     setSubmitted(true);
     addToast('Penilaian dokumen berhasil disimpan & dikunci! 🎉', 'success');
@@ -255,8 +267,11 @@ export default function AuditorPage() {
     const total = evalData.bobot !== null ? evalData.bobot : 0;
     const max   = Math.max(...activeCriteria.map(c => c.bobot !== null ? c.bobot : 0), 4);
     const pct   = max > 0 ? Math.round((total / max) * 100) : 0;
+    const selectedCrit = activeCriteria.find(c => c.id === evalData.criteriaId);
+    const selectedCritLabel = selectedCrit?.label || '-';
+    const isRevisi = selectedCrit?.status === 'revisi';
+    const statusCol = isRevisi ? '#D97706' : '#057A55';
     const col   = scoreColor(pct);
-    const selectedCritLabel = activeCriteria.find(c => c.id === evalData.criteriaId)?.label || '-';
 
     return (
       <div className="app-shell">
@@ -265,7 +280,7 @@ export default function AuditorPage() {
           <div className="card max-w-[540px] w-full p-8 text-center flex flex-col items-center gap-6 shadow-xl animate-[scaleIn_0.25s_ease]">
             <div
               className="w-20 h-20 rounded-full flex items-center justify-center text-white shadow-lg"
-              style={{ background: `linear-gradient(135deg, ${col}, #2563EB)` }}
+              style={{ background: `linear-gradient(135deg, ${statusCol}, #2563EB)` }}
             >
               <CheckSvg size={44} stroke={3} color="white" />
             </div>
@@ -276,15 +291,15 @@ export default function AuditorPage() {
               </h1>
               <p className="text-sm text-[#475569] mt-2 leading-relaxed">
                 Dokumen <strong className="text-[#0F172A]">{selectedDoc?.name}</strong> telah dievaluasi dengan kriteria{' '}
-                <strong className="font-bold" style={{ color: col }}>{selectedCritLabel}</strong>.
+                <strong className="font-bold" style={{ color: statusCol }}>{selectedCritLabel}</strong>.
               </p>
             </div>
 
             <div className="w-full bg-[#F8FAFC] border border-[var(--color-border)] rounded-xl p-5 text-left">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold uppercase tracking-wider text-[#64748B]">Hasil Evaluasi</span>
-                <span className="badge font-bold px-3 py-1 text-xs" style={{ background: `${col}18`, color: col }}>
-                  {scoreLabel(pct)}
+                <span className="badge font-bold px-3 py-1 text-xs" style={{ background: `${statusCol}18`, color: statusCol }}>
+                  {isRevisi ? '⚠️ Perlu Revisi' : '✅ Lolos / Sesuai'}
                 </span>
               </div>
               <div className="flex items-baseline gap-2 mb-2">
@@ -857,6 +872,26 @@ export default function AuditorPage() {
 
                     {/* Criteria Selection Section */}
                     <div className="mb-6">
+                      {(selectedDoc?.kriteria_lolos || selectedDoc?.kriteria_revisi) && (
+                        <div className="mb-4 p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                          <div className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>📋 Standar Kelayakan Dokumen Ini</span>
+                          </div>
+                          {selectedDoc.kriteria_lolos && (
+                            <div className="text-xs text-emerald-800 bg-emerald-50/90 p-2.5 rounded-lg border border-emerald-200 flex items-start gap-2">
+                              <span className="shrink-0 font-bold">✅ Syarat Lolos:</span>
+                              <span className="leading-relaxed">{selectedDoc.kriteria_lolos}</span>
+                            </div>
+                          )}
+                          {selectedDoc.kriteria_revisi && (
+                            <div className="text-xs text-amber-800 bg-amber-50/90 p-2.5 rounded-lg border border-amber-200 flex items-start gap-2">
+                              <span className="shrink-0 font-bold">⚠️ Ketentuan Revisi:</span>
+                              <span className="leading-relaxed">{selectedDoc.kriteria_revisi}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       <div className="flex items-center justify-between mb-3">
                         <label className="text-xs font-black uppercase tracking-wider text-[#0F172A] flex items-center gap-1.5">
                           <span>Kriteria Penilaian Auditor</span>
@@ -900,7 +935,18 @@ export default function AuditorPage() {
 
                               <div className="aud-crit-content">
                                 <div className="aud-crit-title-row justify-between">
-                                  <span className="aud-crit-title">{crit.label}</span>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="aud-crit-title">{crit.label}</span>
+                                    {crit.status === 'revisi' ? (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                                        ⚠️ Harus Direvisi
+                                      </span>
+                                    ) : (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                        ✅ Lolos &amp; Sesuai
+                                      </span>
+                                    )}
+                                  </div>
                                   <span className="badge text-[11px] font-black bg-white border border-[#CBD5E1] text-[#0F172A]">
                                     Bobot: {crit.bobot !== null ? crit.bobot : '-'}
                                   </span>

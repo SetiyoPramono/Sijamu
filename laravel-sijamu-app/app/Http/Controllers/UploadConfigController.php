@@ -78,10 +78,12 @@ class UploadConfigController extends Controller
             'kode' => 'required|string|unique:document_indicators,kode',
             'nama' => 'required|string',
             'help' => 'nullable|string',
+            'kriteria_lolos' => 'nullable|string',
+            'kriteria_revisi' => 'nullable|string',
             'document_category_id' => 'nullable|exists:document_categories,id'
         ]);
-        $doc = DocumentIndicator::create($request->only(['kode', 'nama', 'help', 'document_category_id']));
-        $doc->load('category');
+        $doc = DocumentIndicator::create($request->only(['kode', 'nama', 'help', 'kriteria_lolos', 'kriteria_revisi', 'document_category_id']));
+        $doc->load(['category', 'criteria']);
         return response()->json($doc);
     }
 
@@ -91,11 +93,13 @@ class UploadConfigController extends Controller
             'kode' => 'required|string|unique:document_indicators,kode,'.$id,
             'nama' => 'required|string',
             'help' => 'nullable|string',
+            'kriteria_lolos' => 'nullable|string',
+            'kriteria_revisi' => 'nullable|string',
             'document_category_id' => 'nullable|exists:document_categories,id'
         ]);
         $doc = DocumentIndicator::findOrFail($id);
-        $doc->update($request->only(['kode', 'nama', 'help', 'document_category_id']));
-        $doc->load('category');
+        $doc->update($request->only(['kode', 'nama', 'help', 'kriteria_lolos', 'kriteria_revisi', 'document_category_id']));
+        $doc->load(['category', 'criteria']);
         return response()->json($doc);
     }
 
@@ -110,11 +114,16 @@ class UploadConfigController extends Controller
         $request->validate([
             'label' => 'required|string',
             'bobot' => 'nullable|integer',
-            'kriteria' => 'nullable|string'
+            'kriteria' => 'nullable|string',
+            'status' => 'nullable|string|in:lolos,revisi'
         ]);
 
         $doc = DocumentIndicator::findOrFail($docId);
-        $criteria = $doc->criteria()->create($request->only(['label', 'bobot', 'kriteria']));
+        $data = $request->only(['label', 'bobot', 'kriteria', 'status']);
+        if (empty($data['status'])) {
+            $data['status'] = 'lolos';
+        }
+        $criteria = $doc->criteria()->create($data);
         return response()->json($criteria);
     }
 
@@ -123,11 +132,16 @@ class UploadConfigController extends Controller
         $request->validate([
             'label' => 'required|string',
             'bobot' => 'nullable|integer',
-            'kriteria' => 'nullable|string'
+            'kriteria' => 'nullable|string',
+            'status' => 'nullable|string|in:lolos,revisi'
         ]);
 
         $criteria = DocumentIndicatorCriteria::where('document_indicator_id', $docId)->findOrFail($id);
-        $criteria->update($request->only(['label', 'bobot', 'kriteria']));
+        $data = $request->only(['label', 'bobot', 'kriteria', 'status']);
+        if (empty($data['status'])) {
+            $data['status'] = 'lolos';
+        }
+        $criteria->update($data);
         return response()->json($criteria);
     }
 

@@ -58,15 +58,15 @@ export function EvaluationProvider({ children }) {
     });
   }, []);
 
-  const evaluateDocument = useCallback(async (docId, prodi, totalScore, maxScore, catatan = '', temuan = '', auditorName = 'Auditor Aktif') => {
+  const evaluateDocument = useCallback(async (docId, prodi, totalScore, maxScore, catatan = '', temuan = '', auditorName = 'Auditor Aktif', explicitStatus = null) => {
     // Simulating API save
     await new Promise(r => setTimeout(r, 600));
 
     const percentage = (score, max) => max > 0 ? (score / max) * 100 : 0;
     const pct = percentage(totalScore, maxScore);
     
-    // Status logika: Lulus jika di atas 80%, sisanya Perlu Revisi
-    let status = pct > 80 ? 'success' : 'warning';
+    // Status logika: jika explicitStatus ditentukan ('success' untuk lolos, 'warning' untuk revisi), gunakan langsung
+    let status = explicitStatus ? explicitStatus : (pct > 80 ? 'success' : 'warning');
     
     setDocEvaluations(prev => ({
       ...prev,
@@ -75,7 +75,7 @@ export function EvaluationProvider({ children }) {
         maxScore,
         catatan,
         temuan,
-        status, // 'success' = Lulus, 'warning' = Perlu Revisi
+        status, // 'success' = Lulus/Sesuai, 'warning' = Perlu Revisi
         auditor: auditorName,
         updatedAt: new Date().toISOString()
       }
