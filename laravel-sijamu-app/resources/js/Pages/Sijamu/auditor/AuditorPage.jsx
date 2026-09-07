@@ -23,14 +23,6 @@ const defaultCriteria = [
   { id: 'def-5', label: 'N/A',             bobot: null, colorKey: 'na',            status: 'lolos',  kriteria: 'Indikator tidak relevan atau tidak berlaku pada unit yang diaudit sehingga tidak diperhitungkan dalam evaluasi.' },
 ];
 
-const temuanOptions = [
-  'Tidak ada temuan — dokumen sesuai standar',
-  'Dokumen tidak lengkap — ada lampiran yang kurang',
-  'Format tidak sesuai template SPMI',
-  'Konten perlu diperbarui sesuai kurikulum terbaru',
-  'Tanda tangan / pengesahan pejabat belum lengkap',
-  'Versi dokumen tidak cocok dengan periode audit aktif',
-];
 
 /* ── HELPERS ────────────────────────────────────────────────────── */
 const scoreColor = p => p > 80 ? '#057A55' : p > 50 ? '#D97706' : '#DC2626';
@@ -959,23 +951,6 @@ export default function AuditorPage() {
                       </div>
                     </div>
 
-                    {/* Standard Finding Selector */}
-                    <div className="form-group mb-5">
-                      <label htmlFor="aud-temuan-select" className="form-label text-xs font-black uppercase tracking-wider text-[#334155]">
-                        Temuan Standar SPMI
-                      </label>
-                      <select
-                        id="aud-temuan-select"
-                        className="form-select text-sm font-medium"
-                        value={evalData.temuan}
-                        onChange={e => setEvalData(prev => ({ ...prev, temuan: e.target.value }))}
-                      >
-                        <option value="">— Pilih temuan standar (opsional) —</option>
-                        {temuanOptions.map((opt, i) => (
-                          <option key={i} value={opt}>{opt}</option>
-                        ))}
-                      </select>
-                    </div>
 
                     {/* Notes & Recommendations */}
                     <div className="form-group mb-2">
