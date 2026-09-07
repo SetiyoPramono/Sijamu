@@ -315,16 +315,57 @@ export default function UserManagementPage({ serverUsers, serverPermissions }) {
           </div>
           {activeTab === 'users' && (
             <div className="card">
-              <div className="flex gap-3 items-center flex-wrap mb-2 md:flex-row flex-col md:items-center items-stretch">
-                <div className="relative flex-1 min-w-[200px]">
-                  <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                  <input type="search" className="form-input !pl-[42px]" placeholder="Cari nama, NIP, atau email..." value={search} onChange={e => setSearch(e.target.value)} aria-label="Cari pengguna" />
+              <div className="flex items-center justify-start gap-2 mb-3 flex-wrap sm:flex-nowrap">
+                {/* Filter Pencarian */}
+                <div className="relative">
+                  <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="11" cy="11" r="8"/>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                  </svg>
+                  <input
+                    type="search"
+                    className="filter-mini-input w-44 sm:w-52"
+                    placeholder="Cari nama, NIP, email..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    aria-label="Cari pengguna"
+                  />
                 </div>
-                <select className="form-select min-w-0 md:min-w-[160px] w-auto shrink-0" value={filterRole} onChange={e => setFilterRole(e.target.value)} aria-label="Filter berdasarkan peran"><option value="">Semua Peran</option>{ROLES.map(r => <option key={r} value={r}>{ROLE_MAP[r]}</option>)}</select>
-                <select className="form-select min-w-0 md:min-w-[160px] w-auto shrink-0" value={filterStatus} onChange={e => setFilterStatus(e.target.value)} aria-label="Filter berdasarkan status"><option value="">Semua Status</option><option value="aktif">Aktif</option><option value="nonaktif">Non-aktif</option></select>
-                {(search || filterRole || filterStatus) && <button className="btn btn-ghost btn-sm" onClick={() => { setSearch(''); setFilterRole(''); setFilterStatus(''); }}>Reset Filter</button>}
+
+                {/* Filter Peran */}
+                <select
+                  className="filter-mini-select min-w-[125px]"
+                  value={filterRole}
+                  onChange={e => setFilterRole(e.target.value)}
+                  aria-label="Filter berdasarkan peran"
+                >
+                  <option value="">Semua Peran</option>
+                  {ROLES.map(r => <option key={r} value={r}>{ROLE_MAP[r]}</option>)}
+                </select>
+
+                {/* Filter Status */}
+                <select
+                  className="filter-mini-select min-w-[110px]"
+                  value={filterStatus}
+                  onChange={e => setFilterStatus(e.target.value)}
+                  aria-label="Filter berdasarkan status"
+                >
+                  <option value="">Semua Status</option>
+                  <option value="aktif">Aktif</option>
+                  <option value="nonaktif">Non-aktif</option>
+                </select>
+
+                {/* Reset Filter */}
+                {(search || filterRole || filterStatus) && (
+                  <button
+                    className="filter-mini-btn"
+                    onClick={() => { setSearch(''); setFilterRole(''); setFilterStatus(''); }}
+                    title="Reset semua filter"
+                  >
+                    Reset
+                  </button>
+                )}
               </div>
-              <div className="text-sm text-gray-500 mb-2">Menampilkan <strong>{filtered.length}</strong> dari {users.length} pengguna</div>
               <div className="table-wrapper mt-4">
                 <table className="data-table">
                   <thead><tr><th scope="col">#</th><th scope="col">Pengguna</th><th scope="col">NIP / NIDN</th><th scope="col">Peran</th><th scope="col">Program Studi</th><th scope="col">Status</th><th scope="col">Login Terakhir</th><th scope="col" style={{textAlign:'center'}}>Aksi</th></tr></thead>
