@@ -21,6 +21,7 @@ export default function AdminPeriodsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [activateTarget, setActivateTarget] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
 
   const EMPTY_FORM = { name: '', semester: 'Ganjil', uploadDeadline: '' };
@@ -37,7 +38,7 @@ export default function AdminPeriodsPage() {
   };
 
   // ── Helper Format Batas Waktu untuk Tampilan ─────────────────────────
-  const formatDeadline = (dateStr) => {
+  const formatDeadline = (dateStr, isCurrent = true) => {
     if (!dateStr) return { text: 'Tidak dibatasi', isPassed: false, isNear: false };
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return { text: dateStr, isPassed: false, isNear: false };
@@ -48,15 +49,22 @@ export default function AdminPeriodsPage() {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     const isNear = !isPassed && diffDays <= 7;
 
-    const formatted = d.toLocaleDateString('id-ID', {
+    const formattedDate = d.toLocaleDateString('id-ID', {
+      timeZone: 'Asia/Jakarta',
       day: 'numeric',
       month: 'short',
       year: 'numeric',
+    });
+
+    const formattedTime = d.toLocaleTimeString('id-ID', {
+      timeZone: 'Asia/Jakarta',
       hour: '2-digit',
       minute: '2-digit',
-    }) + ' WIB';
+    }).replace(':', '.');
 
-    return { text: formatted, isPassed, isNear, diffDays };
+    const formatted = `${formattedDate}, ${formattedTime} WIB`;
+
+    return { text: formatted, isPassed, isNear, diffDays, isCurrent };
   };
 
   // ── Stats ───────────────────────────────────────────────────────────
@@ -167,16 +175,18 @@ export default function AdminPeriodsPage() {
     }
   };
 
-  const setAsActive = async (id) => {
+  const handleActivate = async () => {
+    if (!activateTarget) return;
     try {
       setActionLoading(true);
-      await activatePeriod(id);
-      addToast('Diaktifkan', 'Periode berhasil diaktifkan. Seluruh sistem akan mengacu ke periode ini.', 'success');
+      await activatePeriod(activateTarget.id);
+      addToast('Diaktifkan', `Periode "${activateTarget.name} ${activateTarget.semester}" berhasil diaktifkan. Seluruh sistem akan mengacu ke periode ini.`, 'success');
     } catch (err) {
       const errorMsg = err.response?.data?.message || 'Gagal mengaktifkan periode.';
       addToast('Gagal', errorMsg, 'error');
     } finally {
       setActionLoading(false);
+      setActivateTarget(null);
     }
   };
 
@@ -186,14 +196,28 @@ export default function AdminPeriodsPage() {
       <Sidebar />
       <ToastContainer />
 
+      {/* Modal Konfirmasi Hapus */}
       <ConfirmModal
         isOpen={!!deleteTarget}
         title="Hapus Periode Akademik"
         message={`Apakah Anda yakin ingin menghapus periode "${periods.find(p => p.id === deleteTarget)?.name} ${periods.find(p => p.id === deleteTarget)?.semester}"? Tindakan ini tidak dapat dibatalkan.`}
-        confirmText="Ya, Hapus"
-        cancelText="Batal"
+        confirmLabel="Ya, Hapus"
+        cancelLabel="Batal"
+        type="danger"
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      {/* Modal Konfirmasi Aktifkan */}
+      <ConfirmModal
+        isOpen={!!activateTarget}
+        title="Aktifkan Periode Akademik"
+        message={`Apakah Anda yakin ingin mengaktifkan periode "${activateTarget?.name} ${activateTarget?.semester}"? Seluruh sistem (unggah dokumen mutu, RPS, dan dashboard evaluasi) akan beralih mengacu ke periode ini.`}
+        confirmLabel="Ya, Aktifkan"
+        cancelLabel="Batal"
+        type="warning"
+        onConfirm={handleActivate}
+        onCancel={() => setActivateTarget(null)}
       />
 
       <main className="main-content">
@@ -303,98 +327,147 @@ export default function AdminPeriodsPage() {
                       </td>
                     </tr>
                   ) : (
-                    filtered.map((p, idx) => (
-                      <tr key={p.id}>
-                        <td style={{ textAlign: 'center', color: 'var(--color-text-muted)', fontWeight: 500 }}>{idx + 1}</td>
-                        <td style={{ fontWeight: 700, color: 'var(--color-text)' }}>{p.name}</td>
-                        <td>{p.semester}</td>
-                        <td>
-                          {(() => {
-                            const info = formatDeadline(p.uploadDeadline);
-                            if (!p.uploadDeadline) {
-                              return <span style={{ color: 'var(--color-text-muted)', fontSize: '13px', fontStyle: 'italic' }}>Tidak dibatasi</span>;
-                            }
-                            if (info.isPassed) {
+                    filtered.map((p, idx) => {
+                      const isCurrent = Boolean(p.isCurrent);
+                      return (
+                        <tr
+                          key={p.id}
+                          style={{
+                            backgroundColor: isCurrent ? '#F0F6FF' : undefined,
+                            transition: 'background-color 0.15s ease',
+                          }}
+                        >
+                          <td style={{
+                            textAlign: 'center',
+                            color: isCurrent ? 'var(--color-primary)' : 'var(--color-text-muted)',
+                            fontWeight: isCurrent ? 700 : 500,
+                            borderLeft: isCurrent ? '4px solid var(--color-primary)' : '4px solid transparent',
+                          }}>
+                            {idx + 1}
+                          </td>
+                          <td style={{ fontWeight: 700, color: 'var(--color-text)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span>{p.name}</span>
+                              {isCurrent && (
+                                <span style={{
+                                  fontSize: '10px',
+                                  fontWeight: 700,
+                                  padding: '2px 8px',
+                                  borderRadius: '9999px',
+                                  backgroundColor: 'var(--color-primary)',
+                                  color: '#FFFFFF',
+                                  letterSpacing: '0.04em',
+                                  textTransform: 'uppercase',
+                                }}>
+                                  Berjalan
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td>{p.semester}</td>
+                          <td>
+                            {(() => {
+                              const info = formatDeadline(p.uploadDeadline, isCurrent);
+                              if (!p.uploadDeadline) {
+                                return <span style={{ color: 'var(--color-text-muted)', fontSize: '13px', fontStyle: 'italic' }}>Tidak dibatasi</span>;
+                              }
+
+                              // Status untuk Periode Arsip (telah ditutup)
+                              if (!isCurrent) {
+                                return (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                    <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--color-text-muted)' }}>{info.text}</span>
+                                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                      <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#9CA3AF', display: 'inline-block' }}></span>
+                                      Periode Ditutup
+                                    </span>
+                                  </div>
+                                );
+                              }
+
+                              // Status untuk Periode Aktif
+                              if (info.isPassed) {
+                                return (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text)' }}>{info.text}</span>
+                                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-red-600">
+                                      <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#DC2626', display: 'inline-block' }}></span>
+                                      Sudah Berakhir
+                                    </span>
+                                  </div>
+                                );
+                              }
                               return (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                   <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text)' }}>{info.text}</span>
-                                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-red-600">
-                                    <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#DC2626', display: 'inline-block' }}></span>
-                                    Sudah Berakhir
-                                  </span>
+                                  {info.isNear ? (
+                                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-600">
+                                      <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#D97706', display: 'inline-block' }}></span>
+                                      {info.diffDays === 0 ? 'Hari ini terakhir!' : `Tersisa ${info.diffDays} hari`}
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600">
+                                      <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#059669', display: 'inline-block' }}></span>
+                                      Aktif
+                                    </span>
+                                  )}
                                 </div>
                               );
-                            }
-                            return (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text)' }}>{info.text}</span>
-                                {info.isNear ? (
-                                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-600">
-                                    <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#D97706', display: 'inline-block' }}></span>
-                                    {info.diffDays === 0 ? 'Hari ini terakhir!' : `Tersisa ${info.diffDays} hari`}
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600">
-                                    <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#059669', display: 'inline-block' }}></span>
-                                    Aktif
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })()}
-                        </td>
-                        <td style={{ textAlign: 'center' }}>
-                          {p.isCurrent ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-[#EBF2FF] text-[#1A56DB] border border-[#BFDBFE]">
-                              <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#1A56DB', display: 'inline-block' }}></span>
-                              Aktif
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-500 border border-gray-200">
-                              <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#9CA3AF', display: 'inline-block' }}></span>
-                              Arsip
-                            </span>
-                          )}
-                        </td>
-                        <td style={{ textAlign: 'center' }}>
-                          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                            {!p.isCurrent && (
+                            })()}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            {isCurrent ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-[#EBF2FF] text-[#1A56DB] border border-[#BFDBFE]">
+                                <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#1A56DB', display: 'inline-block' }}></span>
+                                Aktif
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-500 border border-gray-200">
+                                <span style={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: '#9CA3AF', display: 'inline-block' }}></span>
+                                Arsip
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ textAlign: 'center', whiteSpace: 'nowrap', minWidth: '220px' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                              {!isCurrent && (
+                                <button
+                                  className="btn btn-sm btn-outline"
+                                  style={{ color: '#059669', borderColor: '#A7F3D0', backgroundColor: 'transparent' }}
+                                  onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#ECFDF5'; }}
+                                  onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                  onClick={() => setActivateTarget(p)}
+                                  disabled={actionLoading}
+                                  title="Jadikan periode ini sebagai periode aktif"
+                                >
+                                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                                  </svg>
+                                  Aktifkan
+                                </button>
+                              )}
                               <button
                                 className="btn btn-sm btn-outline"
-                                style={{ color: '#059669', borderColor: '#A7F3D0', backgroundColor: 'transparent' }}
-                                onMouseEnter={e => { e.currentTarget.style.backgroundColor = '#ECFDF5'; }}
-                                onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                                onClick={() => setAsActive(p.id)}
+                                onClick={() => openModal(p)}
                                 disabled={actionLoading}
-                                title="Jadikan periode ini sebagai periode aktif"
+                                aria-label={`Edit periode ${p.name} ${p.semester}`}
                               >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
-                                </svg>
-                                Aktifkan
+                                Edit
                               </button>
-                            )}
-                            <button
-                              className="btn btn-sm btn-outline"
-                              onClick={() => openModal(p)}
-                              disabled={actionLoading}
-                              aria-label={`Edit periode ${p.name} ${p.semester}`}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              className="btn btn-sm btn-danger"
-                              onClick={() => setDeleteTarget(p.id)}
-                              disabled={p.isCurrent || actionLoading}
-                              title={p.isCurrent ? 'Periode aktif tidak bisa dihapus' : 'Hapus periode'}
-                              aria-label={`Hapus periode ${p.name} ${p.semester}`}
-                            >
-                              Hapus
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
+                              <button
+                                className="btn btn-sm btn-danger"
+                                onClick={() => setDeleteTarget(p.id)}
+                                disabled={isCurrent || actionLoading}
+                                title={isCurrent ? 'Periode aktif tidak bisa dihapus' : 'Hapus periode'}
+                                aria-label={`Hapus periode ${p.name} ${p.semester}`}
+                              >
+                                Hapus
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
