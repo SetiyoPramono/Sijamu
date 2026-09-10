@@ -700,22 +700,18 @@ export default function AuditorPage() {
             </div>
 
             {/* Mobile Tab Toggle */}
-            <div className="flex lg:hidden bg-white border-b border-[var(--color-border)]">
+            <div className="aud-mobile-tab-toggle">
               <button
-                className={`flex-1 py-3 text-xs font-extrabold border-b-2 ${
-                  mobileView === 'form'
-                    ? 'border-[#1A56DB] text-[#1A56DB]'
-                    : 'border-transparent text-[#64748B]'
+                className={`aud-mobile-tab-btn ${
+                  mobileView === 'form' ? 'active' : ''
                 }`}
                 onClick={() => setMobileView('form')}
               >
                 ✏️ Form Penilaian
               </button>
               <button
-                className={`flex-1 py-3 text-xs font-extrabold border-b-2 ${
-                  mobileView === 'doc'
-                    ? 'border-[#1A56DB] text-[#1A56DB]'
-                    : 'border-transparent text-[#64748B]'
+                className={`aud-mobile-tab-btn ${
+                  mobileView === 'doc' ? 'active' : ''
                 }`}
                 onClick={() => setMobileView('doc')}
               >
@@ -808,7 +804,7 @@ export default function AuditorPage() {
 
               {/* Mobile Fullscreen Viewer */}
               {mobileView === 'doc' && (
-                <div className="flex lg:hidden flex-col flex-1 bg-white overflow-hidden">
+                <div className="aud-mobile-viewer">
                   <div className="p-2.5 border-b border-[var(--color-border)] text-xs text-[#334155] font-bold truncate">
                     📄 {selectedDoc.name}
                   </div>
@@ -829,8 +825,7 @@ export default function AuditorPage() {
               )}
 
               {/* RIGHT PANE: Grading & Evaluation Form */}
-              {(mobileView === 'form' || typeof window === 'undefined') && (
-                <div className="aud-form-panel">
+              <div className={`aud-form-panel ${mobileView === 'doc' ? 'mobile-hidden' : ''}`}>
                   <div className="aud-form-scroll-area">
                     {/* Document Meta Header Card */}
                     <div className="aud-doc-meta-card">
@@ -1004,7 +999,6 @@ export default function AuditorPage() {
                     </button>
                   </div>
                 </div>
-              )}
             </div>
           </div>
         )}
