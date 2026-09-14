@@ -4,82 +4,49 @@ namespace App\Http\Controllers;
 
 use App\Models\RpsDocument;
 use App\Models\Course;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use App\Http\Requests\StoreRpsDocumentRequest;
+use App\Services\DocumentUploadService;
+use Exception;
 
 class RpsController extends Controller
 {
     /**
      * Upload an RPS file for a given course.
      */
-    public function upload(Request $request)
+    public function upload(StoreRpsDocumentRequest $request, DocumentUploadService $service)
     {
-        // Fetch dynamic max upload size in KB (default to 20MB if not set)
-        $maxSizeMb = \App\Models\SystemSetting::where('key', 'max_upload_size_mb')->value('value') ?? 20;
-        $maxSizeKb = $maxSizeMb * 1024;
-
-        $request->validate([
-            'course_id' => 'required|exists:courses,id',
-            'file' => 'required|file|mimes:pdf|max:' . $maxSizeKb,
-        ]);
-
         $file = $request->file('file');
-        $courseId = $request->input('course_id');
-        $course = Course::findOrFail($courseId);
+        $course = Course::findOrFail($request->input('course_id'));
         $user = auth()->user();
 
-        // Validasi wewenang unggah: Admin, Koprodi, atau Dosen pengampu mata kuliah
-        if ($user->role !== 'admin' && $user->role !== 'koprodi' && $course->user_id !== $user->id) {
-            return response()->json(['message' => 'Anda tidak memiliki hak akses untuk mengunggah RPS pada mata kuliah ini.'], 403);
+        try {
+            $doc = $service->uploadRps($course, $file, $user);
+
+            return response()->json([
+                'id'         => $doc->id,
+                'name'       => $file->getClientOriginalName(),
+                'size'       => $file->getSize(),
+                'url'        => route('documents.rps.show', ['id' => $doc->id]),
+                'uploadedAt' => $doc->created_at->toISOString(),
+            ]);
+        } catch (Exception $e) {
+            return response()->json(['message' => $e->getMessage()], $e->getCode() ?: 403);
         }
-
-        // Store the file in storage/app/private/rps/{course_id}/
-        $path = $file->store("rps/{$courseId}", 'private');
-
-        // Record the file in the database
-        $doc = RpsDocument::create([
-            'course_id'   => $courseId,
-            'user_id'     => $user->id,
-            'file_name'   => $file->getClientOriginalName(),
-            'file_size'   => $file->getSize(),
-            'file_path'   => $path,
-            'status'      => 'pending',
-            'upload_date' => now()->toDateString(),
-        ]);
-
-        return response()->json([
-            'id'         => $doc->id,
-            'name'       => $file->getClientOriginalName(),
-            'size'       => $file->getSize(),
-            'url'        => route('documents.rps.show', ['id' => $doc->id]),
-            'uploadedAt' => $doc->created_at->toISOString(),
-        ]);
     }
 
     /**
      * Delete an RPS file by document ID.
      */
-    public function destroy($id)
+    public function destroy($id, DocumentUploadService $service)
     {
         $doc = RpsDocument::findOrFail($id);
         $user = auth()->user();
 
-        // Validasi wewenang hapus: Admin atau pemilik/pengunggah file
-        if ($user->role !== 'admin' && $doc->user_id !== $user->id) {
-            return response()->json(['message' => 'Anda tidak memiliki wewenang untuk menghapus dokumen ini.'], 403);
+        try {
+            $service->deleteRps($doc, $user);
+            return response()->json(['message' => 'Deleted']);
+        } catch (Exception $e) {
+            return response()->json(['message' => $e->getMessage()], $e->getCode() ?: 403);
         }
-
-        // Delete the physical file from storage (private or legacy public)
-        if (Storage::disk('private')->exists($doc->file_path)) {
-            Storage::disk('private')->delete($doc->file_path);
-        }
-        if (Storage::disk('public')->exists($doc->file_path)) {
-            Storage::disk('public')->delete($doc->file_path);
-        }
-
-        // Delete the database record
-        $doc->delete();
-
-        return response()->json(['message' => 'Deleted']);
     }
 }
