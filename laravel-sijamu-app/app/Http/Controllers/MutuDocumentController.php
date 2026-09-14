@@ -36,10 +36,14 @@ class MutuDocumentController extends Controller
 
     public function store(Request $request)
     {
+        // Fetch dynamic max upload size in KB (default to 10MB if not set)
+        $maxSizeMb = \App\Models\SystemSetting::where('key', 'max_upload_size_mb')->value('value') ?? 10;
+        $maxSizeKb = $maxSizeMb * 1024;
+
         $request->validate([
             'study_program_id' => 'required|exists:study_programs,id',
             'document_indicator_id' => 'required|exists:document_indicators,id',
-            'file' => 'required|file|mimes:pdf|max:10240', // 10MB
+            'file' => 'required|file|mimes:pdf|max:' . $maxSizeKb,
         ]);
 
         $file = $request->file('file');

@@ -3,6 +3,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { usePage } from '@inertiajs/react';
 import Sidebar from '@/components/Sidebar';
 import Breadcrumb from '@/components/Breadcrumb';
 import HelpTooltip from '@/components/HelpTooltip';
@@ -15,6 +16,7 @@ import { usePeriod } from '@/context/PeriodContext';
 const STEPS = ['Pilih Prodi', 'Unggah Dokumen', 'Selesai'];
 
 export default function UploadPage() {
+  const { props } = usePage();
   const { mutuDocs, addMutuDoc, deleteMutuDoc } = useMutu();
   const { docEvaluations } = useEvaluation();
   const { prodiList, docList, categoryList } = useUploadConfig();
@@ -76,13 +78,14 @@ export default function UploadPage() {
   const processFile = useCallback(async (file, indicatorId) => {
     if (!file) return;
     const validTypes = ['application/pdf'];
-    const maxSize = 10 * 1024 * 1024;
+    const maxSizeMb = props.appSettings?.max_upload_size_mb || 10;
+    const maxSize = maxSizeMb * 1024 * 1024;
     if (!validTypes.includes(file.type) && !file.name.toLowerCase().endsWith('.pdf')) {
       addToast('Format file tidak didukung. Hanya file PDF yang diizinkan.', 'error');
       return;
     }
     if (file.size > maxSize) {
-      addToast('Ukuran file melebihi batas 10MB.', 'error');
+      addToast(`Ukuran file melebihi batas ${maxSizeMb}MB.`, 'error');
       return;
     }
 
@@ -199,7 +202,7 @@ export default function UploadPage() {
                 <p className="text-sm text-[var(--color-text-muted)] leading-[1.6]">{modalIndicator.help}</p>
                 <div className="flex items-center gap-2 mt-3 py-2 px-3 bg-red-50 border border-red-200 rounded-lg">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  <p className="text-xs text-red-600 font-semibold">Hanya file <strong>PDF</strong> yang diterima. Maksimal <strong>10MB</strong> per file.</p>
+                  <p className="text-xs text-red-600 font-semibold">Hanya file <strong>PDF</strong> yang diterima. Maksimal <strong>{props.appSettings?.max_upload_size_mb || 10}MB</strong> per file.</p>
                 </div>
                 {(modalIndicator.kriteria_lolos || modalIndicator.kriteria_revisi) && (
                   <div className="mt-3 p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-1.5 text-left">
@@ -262,7 +265,7 @@ export default function UploadPage() {
                 <p className="text-sm text-[var(--color-text-muted)]">atau klik untuk memilih file dari komputer</p>
                 <div className="flex gap-2 flex-wrap justify-center">
                   <span className="badge badge-danger" style={{ fontWeight: 700 }}>PDF Only</span>
-                  <span className="badge badge-info">Maks. 10MB</span>
+                  <span className="badge badge-info">Maks. {props.appSettings?.max_upload_size_mb || 10}MB</span>
                 </div>
                 <p className="text-xs text-[var(--color-text-muted)] mt-1">⚠️ Hanya format PDF yang diterima. File selain PDF akan ditolak.</p>
                 <input

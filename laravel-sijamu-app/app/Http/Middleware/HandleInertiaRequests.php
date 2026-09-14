@@ -52,7 +52,7 @@ class HandleInertiaRequests extends Middleware
         }
 
         $publicSettings = \App\Models\SystemSetting::whereIn('key', [
-            'institution_name', 'institution_slogan', 'institution_logo', 'primary_color'
+            'institution_name', 'institution_slogan', 'institution_logo', 'primary_color', 'max_upload_size_mb'
         ])->pluck('value', 'key')->toArray();
 
         return [

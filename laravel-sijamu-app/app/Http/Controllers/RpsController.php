@@ -14,9 +14,13 @@ class RpsController extends Controller
      */
     public function upload(Request $request)
     {
+        // Fetch dynamic max upload size in KB (default to 20MB if not set)
+        $maxSizeMb = \App\Models\SystemSetting::where('key', 'max_upload_size_mb')->value('value') ?? 20;
+        $maxSizeKb = $maxSizeMb * 1024;
+
         $request->validate([
             'course_id' => 'required|exists:courses,id',
-            'file' => 'required|file|mimes:pdf|max:20480', // Max 20MB
+            'file' => 'required|file|mimes:pdf|max:' . $maxSizeKb,
         ]);
 
         $file = $request->file('file');

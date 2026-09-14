@@ -7,6 +7,7 @@ import { useRps } from '@/context/RpsContext';
 import { usePeriod } from '@/context/PeriodContext';
 import { useEvaluation } from '@/context/EvaluationContext';
 import { useState, useRef } from 'react';
+import { usePage } from '@inertiajs/react';
 
 /** Format bytes to human-readable string */
 function formatBytes(bytes) {
@@ -26,6 +27,7 @@ function formatDate(iso) {
 const ACCEPTED = '.pdf';
 
 export default function RpsPage() {
+  const { props } = usePage();
   const { courses, uploadRpsFile, removeRpsFile } = useRps();
   const { activePeriod, isArchive } = usePeriod();
   const { docEvaluations } = useEvaluation();
@@ -37,12 +39,11 @@ export default function RpsPage() {
   const fileInputRef                        = useRef(null);
 
   const activeCourse = courses.find((c) => c.id === activeCourseId) ?? courses[0];
+  const maxMb = props.appSettings?.max_upload_size_mb || 20;
 
   /* ── Upload handler ───────────────────────────── */
   const handleFiles = async (files) => {
     if (!files || files.length === 0 || !activeCourse) return;
-    
-    const maxMb = 20;
 
     // Filter: hanya PDF, maks 20MB
     const validFiles = Array.from(files).filter(file => {
@@ -366,7 +367,7 @@ export default function RpsPage() {
                       </p>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="badge badge-danger" style={{ fontWeight: 700 }}>PDF Only</span>
-                        <span className="badge badge-info">Maks. 20MB</span>
+                        <span className="badge badge-info">Maks. {maxMb}MB</span>
                       </div>
                       <p className="text-xs text-[var(--color-text-muted)] mt-1">
                         ⚠️ Hanya file PDF yang diterima. File selain PDF akan ditolak otomatis.
