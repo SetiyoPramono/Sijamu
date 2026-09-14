@@ -80,6 +80,10 @@ Route::middleware('auth')->group(function () {
             ->name('admin.permissions.store')
             ->middleware('permission:manage_users');
             
+        Route::get('/api/settings', [\App\Http\Controllers\SystemSettingController::class, 'getSettings']);
+        Route::post('/api/settings', [\App\Http\Controllers\SystemSettingController::class, 'updateSettings'])->middleware('permission:system_settings');
+        Route::post('/api/settings/logo', [\App\Http\Controllers\SystemSettingController::class, 'uploadLogo'])->middleware('permission:system_settings');
+        
         Route::get('/settings', function () {
             return Inertia::render('Sijamu/admin/settings/page');
         })->middleware('permission:system_settings');

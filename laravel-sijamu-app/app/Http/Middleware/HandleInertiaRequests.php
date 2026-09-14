@@ -51,11 +51,16 @@ class HandleInertiaRequests extends Middleware
             }
         }
 
+        $publicSettings = \App\Models\SystemSetting::whereIn('key', [
+            'institution_name', 'institution_slogan', 'institution_logo', 'primary_color'
+        ])->pluck('value', 'key')->toArray();
+
         return [
             ...parent::share($request),
             'auth' => [
                 'user' => $userData,
             ],
+            'appSettings' => $publicSettings,
         ];
     }
 }

@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call([
+            SystemSettingSeeder::class,
             RolePermissionSeeder::class,
             UploadConfigSeeder::class,
             AcademicPeriodSeeder::class,

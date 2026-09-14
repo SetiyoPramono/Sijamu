@@ -184,7 +184,8 @@ const formatDeadline = (dateStr) => {
 };
 
 export default function Sidebar() {
-  const { url: pathname } = usePage();
+  const { url: pathname, props } = usePage();
+  const { appSettings } = props;
   const { user, logout, hasPermission } = useAuth();
   const { periods, activePeriod, activePeriodId, setActivePeriodId } = usePeriod();
   const userRole    = user?.role;
@@ -220,13 +221,21 @@ export default function Sidebar() {
       {/* Mobile Top Header (only visible on max-lg) */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-[60px] bg-white border-b border-gray-200 z-[90] flex items-center justify-between px-4 shadow-sm" aria-label="Bilah navigasi seluler">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-[var(--color-primary)] rounded-md flex items-center justify-center shadow-sm">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-              <path d="M6 12v5c3 3 9 3 12 0v-5"/>
-            </svg>
+          <div className="w-9 h-9 bg-white border border-gray-100 rounded-md flex items-center justify-center shadow-sm overflow-hidden p-0.5">
+            {appSettings?.institution_logo ? (
+              <img src={appSettings.institution_logo} alt="Logo" className="w-full h-full object-contain" />
+            ) : (
+              <div className="w-full h-full bg-[var(--color-primary)] rounded flex items-center justify-center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                  <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+                </svg>
+              </div>
+            )}
           </div>
-          <div className="font-extrabold text-[var(--color-primary)] tracking-tight">SIJAMU 2.0</div>
+          <div className="font-extrabold text-[var(--color-primary)] tracking-tight truncate max-w-[200px] text-lg" title={appSettings?.institution_name || 'SIJAMU 2.0'}>
+            {appSettings?.institution_name || 'SIJAMU 2.0'}
+          </div>
         </div>
         <button 
           className="w-10 h-10 flex items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]"
@@ -254,15 +263,27 @@ export default function Sidebar() {
       <aside className={`fixed top-0 left-0 w-[var(--sidebar-width)] h-screen bg-[var(--sidebar-bg)] flex flex-col p-5 z-[100] overflow-y-auto overflow-x-hidden shadow-[4px_0_20px_rgba(0,0,0,0.15)] transition-transform duration-300 ${isMobileOpen ? 'translate-x-0' : 'max-lg:-translate-x-full'}`} aria-label="Menu navigasi utama">
         {/* Logo */}
         <div className="flex items-center gap-3 py-3 px-1 mb-6 border-b border-white/10 pb-5">
-          <div className="w-11 h-11 bg-[var(--color-primary)] rounded-md flex items-center justify-center shrink-0 shadow-[0_4px_12px_rgba(26,86,219,0.4)]">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
-              <path d="M6 12v5c3 3 9 3 12 0v-5"/>
-            </svg>
+          <div className="w-12 h-12 bg-white border border-gray-100/20 rounded-md flex items-center justify-center shrink-0 shadow-[0_4px_12px_rgba(26,86,219,0.4)] overflow-hidden p-0.5">
+            {appSettings?.institution_logo ? (
+              <img src={appSettings.institution_logo} alt="Logo" className="w-full h-full object-contain" />
+            ) : (
+              <div className="w-full h-full bg-[var(--color-primary)] rounded flex items-center justify-center">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                  <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+                </svg>
+              </div>
+            )}
           </div>
           <div className="flex-1">
-            <div className="text-lg font-extrabold text-white leading-[1.2] tracking-[-0.01em]">SIJAMU 2.0</div>
-            <div className="text-xs text-[var(--sidebar-text)] opacity-75 leading-[1.3]">UNIPGRI Banyuwangi</div>
+            <div className="text-lg font-extrabold text-white leading-[1.2] tracking-[-0.01em]">
+              {appSettings?.institution_name ? (
+                appSettings.institution_name.length > 15 ? appSettings.institution_name.substring(0,15) + '...' : appSettings.institution_name
+              ) : 'SIJAMU 2.0'}
+            </div>
+            <div className="text-[11px] text-[var(--sidebar-text)] opacity-80 leading-[1.3] truncate w-36" title={appSettings?.institution_slogan || 'Sistem Penjaminan Mutu'}>
+              {appSettings?.institution_slogan || 'Sistem Penjaminan Mutu'}
+            </div>
           </div>
           {/* Close button inside sidebar for mobile */}
           <button 
